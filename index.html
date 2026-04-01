@@ -449,12 +449,12 @@
                 return;
             }
             
-            // 检测微信/QQ（修复后只有真正的微信/QQ才会弹窗）
-            if (isWechatOrQQ()) {
-                document.getElementById('wechatModal').classList.remove('hidden');
-                showStatus('请在系统浏览器中打开', 'error');
-                return;
-            }
+            // 检测微信/QQ（暂时禁用，方便测试）
+            // if (isWechatOrQQ()) {
+            //     document.getElementById('wechatModal').classList.remove('hidden');
+            //     showStatus('请在系统浏览器中打开', 'error');
+            //     return;
+            // }
             
             // 检测钱包是否已安装
             const installed = await checkWalletInstalled(wallet.scheme);
