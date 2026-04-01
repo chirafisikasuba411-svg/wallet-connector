@@ -268,7 +268,7 @@
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
-                dappUrl: (url) => `tp://dapp?url=${encodeURIComponent(url)}`,
+                dappUrl: (url) => `tp://browser?url=${encodeURIComponent(url)}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
@@ -490,6 +490,7 @@
             }
             dappUrl = wallet.dappUrl(window.location.href);
         }
+        console.log('跳转链接:', dappUrl);
         window.location.href = dappUrl;
     }
 
