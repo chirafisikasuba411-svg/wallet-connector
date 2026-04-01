@@ -248,7 +248,7 @@
         }
     };
 
-    // 钱包配置
+    // 钱包配置（完全复刻参考程序）
     const WALLETS = {
         evm: {
             metamask: {
@@ -262,7 +262,7 @@
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                // 使用参考程序中的 tronlinkoutside:// 格式
+                // 参考程序中的格式：tronlinkoutside://pull.activity?param={"action":"open","protocol":"tronlink","version":"1.0","url":"...","dappUrl":"..."}
                 dappUrl: (url) => {
                     const param = {
                         action: 'open',
@@ -278,14 +278,14 @@
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
-                // 使用参考程序中的 tpdapp://open?params={"url":"..."}
+                // 参考程序中的格式：tpdapp://open?params={"url":"..."}
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                // 使用参考程序中的 imtokenv2://navigate?screen=DAppView&url=...
+                // 参考程序中的格式：imtokenv2://navigate?screen=DAppView&url=...
                 dappUrl: (url) => `imtokenv2://navigate?screen=DAppView&url=${encodeURIComponent(url)}`,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
             }
