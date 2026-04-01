@@ -257,40 +257,36 @@
         }
     };
 
-    // 钱包配置（使用通用 HTTPS 链接，避免 scheme 未注册错误）
+    // 钱包配置（只对 MetaMask 和 TokenPocket 自动跳转，其他钱包手动复制链接）
     const WALLETS = {
         evm: {
             metamask: {
                 name: 'MetaMask',
                 icon: '🦊',
                 dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
-                isInjected: () => window.ethereum && window.ethereum.isMetaMask === true
+                isInjected: () => window.ethereum && window.ethereum.isMetaMask === true,
+                autoJump: true
             }
         },
         tron: {
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                dappUrl: (url) => `https://link.tronlink.org/pull.activity?param=${encodeURIComponent(JSON.stringify({
-                    action: 'open',
-                    protocol: 'tronlink',
-                    version: '1.0',
-                    url: url,
-                    dappUrl: url
-                }))}`,
-                isInjected: () => window.tronLink && window.tronLink.ready === true
+                isInjected: () => window.tronLink && window.tronLink.ready === true,
+                autoJump: false  // 手动复制链接
             },
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
-                isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
+                isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined,
+                autoJump: true
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                dappUrl: (url) => `https://token.im/dapp?url=${encodeURIComponent(url)}`,
-                isInjected: () => window.ethereum && window.ethereum.isImToken === true
+                isInjected: () => window.ethereum && window.ethereum.isImToken === true,
+                autoJump: false  // 手动复制链接
             }
         }
     };
@@ -312,8 +308,20 @@
         statusDiv.classList.remove('hidden');
     }
     function hideStatus() { statusDiv.classList.add('hidden'); }
-    function showDialog(msg) {
+    function showDialog(msg, showCopy=false) {
         dialogMessage.textContent = msg;
+        if (showCopy) {
+            const copyBtn = document.createElement('button');
+            copyBtn.textContent = '复制链接';
+            copyBtn.className = 'dialog-button copy-btn';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(window.location.href);
+                dialogMessage.textContent = '链接已复制，请在钱包内置浏览器中粘贴打开';
+                copyBtn.remove();
+                setTimeout(() => hideDialog(), 2000);
+            };
+            dialogMessage.appendChild(copyBtn);
+        }
         dialogMask.style.display = 'flex';
     }
     function hideDialog() { dialogMask.style.display = 'none'; }
@@ -490,22 +498,24 @@
         }
         const isTron = currentChain === '728126428';
         let wallet;
-        let url;
         if (isTron) {
             wallet = WALLETS.tron[selectedWallet];
-            if (!wallet) {
-                showDialog('无效的钱包');
-                return;
-            }
-            url = wallet.dappUrl(window.location.href);
         } else {
             wallet = WALLETS.evm[selectedWallet];
-            if (!wallet) {
-                showDialog('无效的钱包');
-                return;
-            }
-            url = wallet.dappUrl(window.location.href);
         }
+        if (!wallet) {
+            showDialog('无效的钱包');
+            return;
+        }
+
+        // 如果钱包不支持自动跳转（TronLink/imToken），则弹出对话框让用户复制链接手动打开
+        if (!wallet.autoJump) {
+            showDialog(`请在 ${wallet.name} 钱包的内置浏览器中打开此页面完成授权。\n\n您可以复制以下链接，然后在钱包内粘贴打开：\n${window.location.href}`, true);
+            return;
+        }
+
+        // 自动跳转
+        let url = wallet.dappUrl(window.location.href);
         console.log('跳转链接:', url);
         window.location.href = url;
     }
