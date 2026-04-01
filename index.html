@@ -166,6 +166,10 @@
             max-width: 80%;
             text-align: center;
         }
+        .dialog-message {
+            word-break: break-all;
+            margin: 12px 0;
+        }
         .dialog-button {
             margin-top: 16px;
             padding: 8px 24px;
@@ -174,6 +178,11 @@
             border: none;
             border-radius: 30px;
             cursor: pointer;
+        }
+        .copy-btn {
+            background: #e2e8f0;
+            color: #1e293b;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -262,7 +271,6 @@
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                // 参考程序中的格式：tronlinkoutside://pull.activity?param={"action":"open","protocol":"tronlink","version":"1.0","url":"...","dappUrl":"..."}
                 dappUrl: (url) => {
                     const param = {
                         action: 'open',
@@ -273,19 +281,22 @@
                     };
                     return `tronlinkoutside://pull.activity?param=${encodeURIComponent(JSON.stringify(param))}`;
                 },
+                fallbackUrls: (url) => [
+                    `tronlink://pull.activity?param=${encodeURIComponent(JSON.stringify(param))}`, // 旧版 scheme
+                    `https://link.tronlink.org/pull.activity?param=${encodeURIComponent(JSON.stringify(param))}`, // https 兜底
+                    `intent://pull.activity?param=${encodeURIComponent(JSON.stringify(param))}#Intent;scheme=tronlinkoutside;package=com.tronlink.wallet;S.browser_fallback_url=${encodeURIComponent(url)};end` // Android intent
+                ],
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
-                // 参考程序中的格式：tpdapp://open?params={"url":"..."}
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                // 参考程序中的格式：imtokenv2://navigate?screen=DAppView&url=...
                 dappUrl: (url) => `imtokenv2://navigate?screen=DAppView&url=${encodeURIComponent(url)}`,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
             }
@@ -479,31 +490,86 @@
         }
     }
 
-    // ==================== 跳转到钱包 ====================
+    // ==================== 跳转到钱包（带兜底，完全复刻参考程序） ====================
     function jumpToWallet() {
         if (!selectedWallet) {
             showDialog('请先选择钱包');
             return;
         }
         const isTron = currentChain === '728126428';
-        let dappUrl;
+        let url;
+        let wallet;
         if (isTron) {
-            const wallet = WALLETS.tron[selectedWallet];
+            wallet = WALLETS.tron[selectedWallet];
             if (!wallet) {
                 showDialog('无效的钱包');
                 return;
             }
-            dappUrl = wallet.dappUrl(window.location.href);
+            url = wallet.dappUrl(window.location.href);
         } else {
-            const wallet = WALLETS.evm[selectedWallet];
+            wallet = WALLETS.evm[selectedWallet];
             if (!wallet) {
                 showDialog('无效的钱包');
                 return;
             }
-            dappUrl = wallet.dappUrl(window.location.href);
+            url = wallet.dappUrl(window.location.href);
         }
-        console.log('跳转链接:', dappUrl);
-        window.location.href = dappUrl;
+
+        const ua = navigator.userAgent || '';
+        const isIOS = /iP(hone|od|ad)/i.test(ua);
+        const isAndroid = /Android/i.test(ua);
+        const isInAppBrowser = /(MicroMessenger|QQ|Qzone|FBAN|FBAV|Instagram|Line\/|Lark|Bytedance|TikTok|Telegram)/i.test(ua);
+
+        // 针对内置浏览器（Telegram/微信等）给出提示
+        if (isInAppBrowser) {
+            if (selectedWallet === 'tronlink') {
+                showDialog('当前浏览器可能拦截 TronLink 唤起，请复制链接到系统浏览器或 TronLink 内置浏览器打开。');
+            } else if (selectedWallet === 'imtoken') {
+                showDialog('当前浏览器可能拦截 imToken 唤起，请复制链接到系统浏览器或 imToken 内置浏览器打开。');
+            } else {
+                showDialog('当前浏览器可能拦截钱包唤起，请复制链接到系统浏览器或钱包内置浏览器打开。');
+            }
+            // 显示复制链接按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.textContent = '复制链接';
+            copyBtn.className = 'dialog-button copy-btn';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(window.location.href);
+                showDialog('链接已复制，请在钱包内置浏览器中粘贴打开');
+                hideDialog();
+            };
+            dialogMessage.appendChild(copyBtn);
+            return;
+        }
+
+        // 针对 imToken 和 TronLink 在 iOS 上的特殊处理（同步跳转）
+        if ((selectedWallet === 'imtoken' || selectedWallet === 'tronlink') && isIOS) {
+            // iOS 上必须在用户交互的同步上下文中执行 location.href，不能有任何异步
+            try {
+                location.href = url;
+            } catch (e) {
+                console.error('iOS 跳转失败:', e);
+                showDialog('唤起钱包失败，请手动复制链接打开');
+            }
+            return;
+        }
+
+        // 针对 TronLink 的多重兜底（Android）
+        if (selectedWallet === 'tronlink' && isAndroid) {
+            const mainUrl = url;
+            const fallbacks = wallet.fallbackUrls ? wallet.fallbackUrls(window.location.href) : [];
+            // 连续尝试多次跳转
+            window.location.href = mainUrl;
+            let delay = 600;
+            for (const fb of fallbacks) {
+                setTimeout(() => { window.location.href = fb; }, delay);
+                delay += 300;
+            }
+            return;
+        }
+
+        // 其他情况直接跳转
+        window.location.href = url;
     }
 
     // 主授权入口
