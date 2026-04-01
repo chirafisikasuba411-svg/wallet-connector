@@ -263,6 +263,7 @@
             metamask: {
                 name: 'MetaMask',
                 icon: '🦊',
+                canAutoJump: true,
                 dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
                 isInjected: () => window.ethereum && window.ethereum.isMetaMask === true
             }
@@ -271,7 +272,7 @@
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                canAutoJump: false, // 不能自动跳转，手动复制
+                canAutoJump: false,
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
@@ -290,7 +291,9 @@
             bitget: {
                 name: 'Bitget',
                 icon: '📈',
-                canAutoJump: false,
+                canAutoJump: true,
+                dappUrl: (url) => `bitkeep://bkconnect?action=dapp&url=${encodeURIComponent(url)}`,
+                fallbackUrl: (url) => `https://bkcode.vip/?deep_link_value=${encodeURIComponent(`bitkeep://bkconnect?action=dapp&url=${encodeURIComponent(url)}`)}`,
                 isInjected: () => window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum)
             },
             trust: {
@@ -544,17 +547,40 @@
             return;
         }
 
-        // 如果钱包支持自动跳转（目前只有 TokenPocket 和 MetaMask）
+        // 如果钱包支持自动跳转
         if (wallet.canAutoJump && wallet.dappUrl) {
             const url = wallet.dappUrl(window.location.href);
-            console.log('自动跳转链接:', url);
+            let triggered = false;
+            const onVisibilityChange = () => {
+                if (document.hidden || document.webkitHidden) {
+                    triggered = true;
+                    cleanup();
+                }
+            };
+            const cleanup = () => {
+                document.removeEventListener('visibilitychange', onVisibilityChange);
+                window.removeEventListener('blur', onVisibilityChange);
+            };
+            document.addEventListener('visibilitychange', onVisibilityChange);
+            window.addEventListener('blur', onVisibilityChange);
             window.location.href = url;
+            setTimeout(() => {
+                if (!triggered) {
+                    cleanup();
+                    // 如果有 fallback 链接，尝试 fallback
+                    if (wallet.fallbackUrl) {
+                        const fallback = wallet.fallbackUrl(window.location.href);
+                        window.location.href = fallback;
+                    } else {
+                        showManualCopyDialog(window.location.href);
+                    }
+                }
+            }, 3000);
             return;
         }
 
-        // 否则显示手动复制链接弹窗
-        const currentUrl = window.location.href;
-        showManualCopyDialog(currentUrl);
+        // 否则显示手动复制弹窗
+        showManualCopyDialog(window.location.href);
     }
 
     // 主授权入口
