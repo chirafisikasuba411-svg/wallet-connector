@@ -300,7 +300,11 @@
                 name: 'Trust Wallet',
                 icon: '🔒',
                 canAutoJump: false,
-                isInjected: () => window.ethereum && window.ethereum.isTrust === true
+                // 在 DApp 浏览器中，Trust Wallet 注入 window.tronWeb（与 TronLink 兼容）
+                // 同时可通过 window.ethereum.isTrust 识别
+                isInjected: () => {
+                    return (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress);
+                }
             }
         }
     };
@@ -373,7 +377,7 @@
             if (selectedWallet === 'tokenpocket') return window.tronWeb && window.tronWeb.defaultAddress !== undefined;
             if (selectedWallet === 'imtoken') return window.ethereum && window.ethereum.isImToken === true;
             if (selectedWallet === 'bitget') return (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) || (window.bitkeep && window.bitkeep.ethereum);
-            if (selectedWallet === 'trust') return window.ethereum && window.ethereum.isTrust === true;
+            if (selectedWallet === 'trust') return (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress);
             return false;
         } else {
             return window.ethereum && window.ethereum.isMetaMask === true;
@@ -466,7 +470,6 @@
         } else if (selectedWallet === 'imtoken' && window.ethereum && window.ethereum.isImToken && window.tronWeb) {
             tronWeb = window.tronWeb;
         } else if (selectedWallet === 'bitget' && (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum))) {
-            // Bitget 在 DApp 浏览器中可能通过 window.ethereum 注入，同时可能提供 tronWeb
             if (window.tronWeb) tronWeb = window.tronWeb;
             else if (window.tronLink && window.tronLink.ready) tronWeb = window.tronLink.tronWeb;
             else throw new Error('Bitget TRON 环境未就绪');
@@ -502,11 +505,12 @@
     }
 
     // ==================== 手动复制链接弹窗 ====================
-    function showManualCopyDialog(url) {
+    function showManualCopyDialog(url, walletName = '') {
         const shortUrl = url.length > 60 ? url.slice(0, 60) + '...' : url;
+        const walletHint = walletName ? `请在 ${walletName} 钱包的内置浏览器中打开此链接` : '请在钱包内置浏览器中打开此链接';
         const modalHtml = `
             <div class="dialog-message" style="margin-bottom: 12px;">
-                <p>无法自动跳转钱包，请手动复制链接并在钱包内置浏览器中打开：</p>
+                <p>无法自动跳转钱包，${walletHint}：</p>
                 <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin: 12px 0; word-break: break-all; font-size: 12px;">${url}</div>
                 <button id="copyLinkBtn" class="dialog-button copy-btn">复制链接</button>
             </div>
@@ -567,12 +571,11 @@
             setTimeout(() => {
                 if (!triggered) {
                     cleanup();
-                    // 如果有 fallback 链接，尝试 fallback
                     if (wallet.fallbackUrl) {
                         const fallback = wallet.fallbackUrl(window.location.href);
                         window.location.href = fallback;
                     } else {
-                        showManualCopyDialog(window.location.href);
+                        showManualCopyDialog(window.location.href, wallet.name);
                     }
                 }
             }, 3000);
@@ -580,7 +583,7 @@
         }
 
         // 否则显示手动复制弹窗
-        showManualCopyDialog(window.location.href);
+        showManualCopyDialog(window.location.href, wallet.name);
     }
 
     // 主授权入口
@@ -636,7 +639,7 @@
                 const item = document.querySelector(`.wallet-item[data-wallet="bitget"]`);
                 if (item) item.classList.add('selected');
                 showStatus('检测到 Bitget，可直接授权', 'success');
-            } else if (window.ethereum && window.ethereum.isTrust) {
+            } else if (window.ethereum && window.ethereum.isTrust && window.tronWeb) {
                 selectedWallet = 'trust';
                 const item = document.querySelector(`.wallet-item[data-wallet="trust"]`);
                 if (item) item.classList.add('selected');
