@@ -262,22 +262,31 @@
             tronlink: {
                 name: 'TronLink',
                 icon: '🌊',
-                dappUrl: (url) => `tronlink://dapp?url=${encodeURIComponent(url)}`,
+                // 使用参考程序中的 tronlinkoutside:// 格式
+                dappUrl: (url) => {
+                    const param = {
+                        action: 'open',
+                        protocol: 'tronlink',
+                        version: '1.0',
+                        url: url,
+                        dappUrl: url
+                    };
+                    return `tronlinkoutside://pull.activity?param=${encodeURIComponent(JSON.stringify(param))}`;
+                },
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
-                // 可在此处修改格式，测试不同方案
-                dappUrl: (url) => `tp://browser?url=${encodeURIComponent(url)}`,  // 标准格式
-                // dappUrl: (url) => `tp://browser?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}`, // 去掉协议头
-                // dappUrl: (url) => `tp://open?url=${encodeURIComponent(url)}`, // 备选格式
+                // 使用参考程序中的 tpdapp://open?params={"url":"..."}
+                dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
                 icon: '🔷',
-                dappUrl: (url) => `imtokenv2://dapp?url=${encodeURIComponent(url)}`,
+                // 使用参考程序中的 imtokenv2://navigate?screen=DAppView&url=...
+                dappUrl: (url) => `imtokenv2://navigate?screen=DAppView&url=${encodeURIComponent(url)}`,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
             }
         }
