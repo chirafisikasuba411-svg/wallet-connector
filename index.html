@@ -90,6 +90,15 @@
         .fallback-btn {
             background: #e2e8f0; color: #1e293b; margin-top: 8px;
         }
+        .copy-link {
+            display: inline-block;
+            background: #f1f5f9;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            word-break: break-all;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -131,7 +140,6 @@
         </div>
     </div>
 
-    <!-- 引入依赖 -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script>
         // ==================== 配置 ====================
@@ -148,10 +156,10 @@
 
         // 钱包列表
         const EVM_WALLETS = [
-            { key: 'metamask', name: 'MetaMask', icon: '🦊', scheme: 'metamask://', dappScheme: (url) => `metamask://dapp/?url=${encodeURIComponent(url)}` },
-            { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', scheme: 'tp://', dappScheme: (url) => `tp://dapp?url=${encodeURIComponent(url)}` },
-            { key: 'imtoken', name: 'imToken', icon: '🔷', scheme: 'imtokenv2://', dappScheme: (url) => `imtokenv2://dapp?url=${encodeURIComponent(url)}` },
-            { key: 'trust', name: 'Trust Wallet', icon: '🔒', scheme: 'trust://', dappScheme: (url) => `trust://dapp?url=${encodeURIComponent(url)}` }
+            { key: 'metamask', name: 'MetaMask', icon: '🦊', scheme: 'metamask://' },
+            { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', scheme: 'tp://' },
+            { key: 'imtoken', name: 'imToken', icon: '🔷', scheme: 'imtokenv2://' },
+            { key: 'trust', name: 'Trust Wallet', icon: '🔒', scheme: 'trust://' }
         ];
 
         let currentChain = '1';
@@ -249,7 +257,7 @@
             }
         }
 
-        // 降级方案：生成链接跳转到钱包内置浏览器
+        // 降级方案：复制链接并提示手动打开
         function openInWalletBrowser() {
             if (!selectedWallet) {
                 showDialog('请先选择钱包');
@@ -257,10 +265,12 @@
             }
             const wallet = EVM_WALLETS.find(w => w.key === selectedWallet);
             const currentUrl = window.location.href;
-            const deepLink = wallet.dappScheme(currentUrl);
-            showStatus(`正在跳转到 ${wallet.name} 内置浏览器...`, 'loading');
-            window.location.href = deepLink;
-            // 跳转后，页面会关闭，无需进一步处理
+            // 复制链接
+            navigator.clipboard.writeText(currentUrl).then(() => {
+                showDialog(`链接已复制！请打开 ${wallet.name} 钱包，在它的内置浏览器中粘贴此链接并打开，然后授权。`);
+            }).catch(() => {
+                showDialog(`请手动复制此链接：${currentUrl}，然后在 ${wallet.name} 钱包的内置浏览器中打开并授权。`);
+            });
         }
 
         // 主授权入口：尝试 WalletConnect，若库未加载则提示降级
@@ -282,7 +292,6 @@
             // 尝试动态加载 WalletConnect 库
             showStatus('加载 WalletConnect 库...', 'loading');
             try {
-                // 动态加载 WalletConnect 库
                 const script = document.createElement('script');
                 script.src = 'https://unpkg.com/@walletconnect/ethereum-provider@2.10.6/dist/index.umd.js';
                 script.onload = async () => {
@@ -410,7 +419,7 @@
             const container = document.getElementById('fallbackContainer');
             container.innerHTML = `
                 <button class="approve-btn fallback-btn" id="fallbackBtn">
-                    使用钱包内置浏览器打开
+                    无法唤起钱包？点此获取链接，手动打开
                 </button>
             `;
             const btn = document.getElementById('fallbackBtn');
