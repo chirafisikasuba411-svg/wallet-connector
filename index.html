@@ -87,10 +87,9 @@
             background: white;
         }
         
-        .wallet-item:hover {
+        .wallet-item.selected {
             border-color: #667eea;
             background: #f8f9ff;
-            transform: translateX(4px);
         }
         
         .wallet-icon {
@@ -135,11 +134,6 @@
         
         .approve-btn:active {
             transform: scale(0.98);
-        }
-        
-        .approve-btn.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
         
         .status {
@@ -199,6 +193,17 @@
         .hidden {
             display: none;
         }
+        
+        .retry-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -220,7 +225,7 @@
             </div>
             
             <!-- 授权按钮 -->
-            <button class="approve-btn" id="approveBtn">授权 USDT</button>
+            <button class="approve-btn" id="approveBtn">打开钱包授权</button>
             
             <!-- 状态显示 -->
             <div class="status hidden" id="status"></div>
@@ -292,6 +297,7 @@
         // 当前状态
         let currentChain = '1';
         let selectedWallet = null;
+        let pendingDeepLink = null;
         
         // ==================== 工具函数 ====================
         function showStatus(message, type = 'loading') {
@@ -309,15 +315,16 @@
             const prompt = document.getElementById('downloadPrompt');
             const downloadUrl = getDownloadUrl(wallet);
             prompt.innerHTML = `
-                检测到您未安装 ${wallet.name} 钱包
-                <a href="${downloadUrl}" target="_blank">点击下载</a>
+                检测到未成功打开 ${wallet.name}<br>
+                请确保已安装钱包<br>
+                <a href="${downloadUrl}" target="_blank" style="display: inline-block; margin-top: 8px; color: #667eea;">点击下载钱包</a>
                 <span style="margin-left: 12px; cursor: pointer;" onclick="closeDownloadPrompt()">✕</span>
             `;
             prompt.classList.remove('hidden');
             
             setTimeout(() => {
                 closeDownloadPrompt();
-            }, 5000);
+            }, 8000);
         }
         
         function closeDownloadPrompt() {
@@ -339,38 +346,10 @@
             return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         }
         
-        // ==================== 钱包检测 ====================
-        async function checkWalletInstalled(scheme) {
-            return new Promise((resolve) => {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = scheme;
-                document.body.appendChild(iframe);
-                
-                const timer = setTimeout(() => {
-                    document.body.removeChild(iframe);
-                    resolve(false);
-                }, 2000);
-                
-                const onVisibilityChange = () => {
-                    if (document.hidden || document.webkitHidden) {
-                        clearTimeout(timer);
-                        document.body.removeChild(iframe);
-                        document.removeEventListener('visibilitychange', onVisibilityChange);
-                        window.removeEventListener('blur', onVisibilityChange);
-                        resolve(true);
-                    }
-                };
-                
-                window.addEventListener('blur', onVisibilityChange);
-                document.addEventListener('visibilitychange', onVisibilityChange);
-            });
-        }
-        
-        // ==================== 授权逻辑 ====================
-        async function approve() {
+        // ==================== 唤起钱包（不检测是否安装，直接尝试） ====================
+        function openWallet() {
             if (!selectedWallet) {
-                showStatus('请先选择钱包', 'error');
+                showStatus('请先选择一个钱包', 'error');
                 return;
             }
             
@@ -380,40 +359,34 @@
             
             // 检查钱包是否支持当前链
             if (!wallet.chains.includes(chainType)) {
-                showStatus(`${wallet.name} 不支持当前链`, 'error');
+                showStatus(`${wallet.name} 不支持 ${chainId === 728126428 ? 'TRON' : chainId === 56 ? 'BNB Chain' : 'Ethereum'}`, 'error');
                 return;
             }
             
-            showStatus(`正在唤起 ${wallet.name}...`, 'loading');
+            showStatus(`正在尝试打开 ${wallet.name}...`, 'loading');
             
-            // 检测是否在桌面端
-            if (!isMobile()) {
-                showStatus('请在手机端打开此页面', 'error');
-                return;
-            }
-            
-            // 检测钱包是否已安装
-            const installed = await checkWalletInstalled(wallet.scheme);
-            
-            if (!installed) {
-                hideStatus();
-                showDownloadPrompt(wallet);
-                return;
-            }
-            
-            // 已安装，唤起钱包
+            // 直接尝试唤起
             const deepLink = `${wallet.scheme}`;
+            pendingDeepLink = deepLink;
             
+            // 记录开始时间
+            const startTime = Date.now();
+            
+            // 尝试唤起
             window.location.href = deepLink;
             
-            // 2秒后检测是否成功唤起
+            // 设置一个定时器，如果页面没有离开，说明可能没有安装钱包
             setTimeout(() => {
-                if (!document.hidden && !document.webkitHidden) {
-                    showStatus('唤起钱包失败，请确保钱包已安装', 'error');
+                const elapsed = Date.now() - startTime;
+                // 如果页面仍然可见，说明没有被唤起
+                if (!document.hidden && !document.webkitHidden && elapsed > 2000) {
+                    hideStatus();
+                    showDownloadPrompt(wallet);
                 } else {
-                    showStatus('请打开钱包完成授权', 'success');
+                    // 页面被隐藏了，说明成功唤起
+                    showStatus('已唤起钱包，请在钱包中完成操作', 'success');
                 }
-            }, 2000);
+            }, 2500);
         }
         
         // ==================== UI 渲染 ====================
@@ -444,11 +417,9 @@
                     
                     // 高亮选中
                     document.querySelectorAll('.wallet-item').forEach(w => {
-                        w.style.borderColor = '#e0e0e0';
-                        w.style.background = 'white';
+                        w.classList.remove('selected');
                     });
-                    item.style.borderColor = '#667eea';
-                    item.style.background = '#f8f9ff';
+                    item.classList.add('selected');
                     
                     hideStatus();
                 });
@@ -473,10 +444,15 @@
             document.querySelector('.chain-btn[data-chain="1"]').classList.add('active');
             
             // 授权按钮
-            document.getElementById('approveBtn').addEventListener('click', approve);
+            document.getElementById('approveBtn').addEventListener('click', openWallet);
             
             // 渲染钱包列表
             renderWalletList();
+            
+            // 移动端提示
+            if (!isMobile()) {
+                showStatus('请使用手机访问此页面以获得最佳体验', 'error');
+            }
         }
         
         // 启动
