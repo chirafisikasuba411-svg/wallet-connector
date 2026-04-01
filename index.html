@@ -268,7 +268,10 @@
             tokenpocket: {
                 name: 'TokenPocket',
                 icon: '🎫',
-                dappUrl: (url) => `tp://dapp?url=${encodeURIComponent(url)}`,
+                // 可在此处修改格式，测试不同方案
+                dappUrl: (url) => `tp://browser?url=${encodeURIComponent(url)}`,  // 标准格式
+                // dappUrl: (url) => `tp://browser?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}`, // 去掉协议头
+                // dappUrl: (url) => `tp://open?url=${encodeURIComponent(url)}`, // 备选格式
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
