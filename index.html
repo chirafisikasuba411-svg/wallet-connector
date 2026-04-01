@@ -291,17 +291,14 @@
             bitget: {
                 name: 'Bitget',
                 icon: '📈',
-                canAutoJump: true,
-                dappUrl: (url) => `bitkeep://bkconnect?action=dapp&url=${encodeURIComponent(url)}`,
-                fallbackUrl: (url) => `https://bkcode.vip/?deep_link_value=${encodeURIComponent(`bitkeep://bkconnect?action=dapp&url=${encodeURIComponent(url)}`)}`,
+                canAutoJump: false,  // 改为手动复制
                 isInjected: () => window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum)
             },
             trust: {
                 name: 'Trust Wallet',
                 icon: '🔒',
                 canAutoJump: false,
-                // 在 DApp 浏览器中，Trust Wallet 注入 window.tronWeb（与 TronLink 兼容）
-                // 同时可通过 window.ethereum.isTrust 识别
+                // 修复 Trust 检测：需要同时满足 isTrust 和 tronWeb 存在
                 isInjected: () => {
                     return (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress);
                 }
@@ -551,7 +548,7 @@
             return;
         }
 
-        // 如果钱包支持自动跳转
+        // 如果钱包支持自动跳转（目前只有 MetaMask 和 TokenPocket）
         if (wallet.canAutoJump && wallet.dappUrl) {
             const url = wallet.dappUrl(window.location.href);
             let triggered = false;
@@ -571,12 +568,7 @@
             setTimeout(() => {
                 if (!triggered) {
                     cleanup();
-                    if (wallet.fallbackUrl) {
-                        const fallback = wallet.fallbackUrl(window.location.href);
-                        window.location.href = fallback;
-                    } else {
-                        showManualCopyDialog(window.location.href, wallet.name);
-                    }
+                    showManualCopyDialog(window.location.href, wallet.name);
                 }
             }, 3000);
             return;
