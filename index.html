@@ -383,9 +383,10 @@
             return wallet.download.fallback;
         }
         
-        // 检测是否在微信/QQ浏览器
+        // 检测是否在微信/QQ浏览器（修复版）
         function isWechatOrQQ() {
             const ua = navigator.userAgent.toLowerCase();
+            // 只有明确包含 micromessenger 或 qq 才认为是微信/QQ
             return ua.includes('micromessenger') || ua.includes('qq/');
         }
         
@@ -448,7 +449,7 @@
                 return;
             }
             
-            // 检测微信/QQ
+            // 检测微信/QQ（修复后只有真正的微信/QQ才会弹窗）
             if (isWechatOrQQ()) {
                 document.getElementById('wechatModal').classList.remove('hidden');
                 showStatus('请在系统浏览器中打开', 'error');
@@ -465,18 +466,13 @@
             }
             
             // 已安装，唤起钱包
-            // 构造唤起链接（目前先唤起钱包首页，后续可添加 WalletConnect 参数）
             const deepLink = `${wallet.scheme}`;
-            
-            // 记录开始时间，用于检测是否成功唤起
-            const startTime = Date.now();
             
             window.location.href = deepLink;
             
             // 2秒后检测是否成功唤起
             setTimeout(() => {
                 if (!document.hidden && !document.webkitHidden) {
-                    // 页面仍然可见，可能唤起失败
                     showStatus('唤起钱包失败，请确保钱包已安装', 'error');
                 } else {
                     showStatus('请打开钱包完成授权', 'success');
@@ -545,13 +541,6 @@
             
             // 渲染钱包列表
             renderWalletList();
-            
-            // 微信/QQ 检测提示
-            if (isWechatOrQQ()) {
-                setTimeout(() => {
-                    document.getElementById('wechatModal').classList.remove('hidden');
-                }, 1000);
-            }
         }
         
         // 启动
