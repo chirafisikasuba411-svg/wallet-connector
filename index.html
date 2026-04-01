@@ -199,37 +199,6 @@
         .hidden {
             display: none;
         }
-        
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1001;
-        }
-        
-        .modal-content {
-            background: white;
-            border-radius: 24px;
-            padding: 24px;
-            max-width: 300px;
-            text-align: center;
-        }
-        
-        .modal-content button {
-            margin-top: 16px;
-            padding: 10px 20px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body>
@@ -259,22 +228,9 @@
     </div>
     
     <div id="downloadPrompt" class="download-prompt hidden"></div>
-    <div id="wechatModal" class="modal hidden">
-        <div class="modal-content">
-            <p>⚠️ 检测到您在微信/QQ浏览器中</p>
-            <p style="font-size: 14px; margin-top: 12px;">请点击右上角，选择「在浏览器中打开」</p>
-            <button onclick="closeWechatModal()">我知道了</button>
-        </div>
-    </div>
 
     <script>
         // ==================== 配置 ====================
-        const USDT_ADDRESS = {
-            1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',   // Ethereum USDT
-            56: '0x55d398326f99059fF775485246999027B3197955',  // BSC USDT
-            728126428: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'     // TRON USDT
-        };
-        
         const wallets = {
             metamask: {
                 name: 'MetaMask',
@@ -336,7 +292,6 @@
         // 当前状态
         let currentChain = '1';
         let selectedWallet = null;
-        let wcClient = null;
         
         // ==================== 工具函数 ====================
         function showStatus(message, type = 'loading') {
@@ -369,10 +324,6 @@
             document.getElementById('downloadPrompt').classList.add('hidden');
         }
         
-        function closeWechatModal() {
-            document.getElementById('wechatModal').classList.add('hidden');
-        }
-        
         function getDownloadUrl(wallet) {
             const ua = navigator.userAgent;
             if (/iPhone|iPad/i.test(ua)) {
@@ -383,13 +334,6 @@
             return wallet.download.fallback;
         }
         
-        // 检测是否在微信/QQ浏览器（修复版）
-        function isWechatOrQQ() {
-            const ua = navigator.userAgent.toLowerCase();
-            // 只有明确包含 micromessenger 或 qq 才认为是微信/QQ
-            return ua.includes('micromessenger') || ua.includes('qq/');
-        }
-        
         // 检测是否移动端
         function isMobile() {
             return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -398,7 +342,6 @@
         // ==================== 钱包检测 ====================
         async function checkWalletInstalled(scheme) {
             return new Promise((resolve) => {
-                const startTime = Date.now();
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 iframe.src = scheme;
@@ -448,13 +391,6 @@
                 showStatus('请在手机端打开此页面', 'error');
                 return;
             }
-            
-            // 检测微信/QQ（暂时禁用，方便测试）
-            // if (isWechatOrQQ()) {
-            //     document.getElementById('wechatModal').classList.remove('hidden');
-            //     showStatus('请在系统浏览器中打开', 'error');
-            //     return;
-            // }
             
             // 检测钱包是否已安装
             const installed = await checkWalletInstalled(wallet.scheme);
