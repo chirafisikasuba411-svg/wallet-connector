@@ -88,6 +88,12 @@
             justify-content: center;
             margin-right: 16px;
             font-size: 24px;
+            overflow: hidden;
+        }
+        .wallet-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
         .wallet-info {
             flex: 1;
@@ -254,11 +260,13 @@
         }
     };
 
+    // 钱包配置（使用官方图标，并添加 emoji 回退）
     const WALLETS = {
         evm: {
             metamask: {
                 name: 'MetaMask',
-                icon: '🦊',
+                iconUrl: 'https://metamask.io/images/metamask-fox.svg',
+                fallbackIcon: '🦊',
                 canAutoJump: true,
                 dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
                 isInjected: () => window.ethereum && window.ethereum.isMetaMask === true
@@ -267,32 +275,37 @@
         tron: {
             tronlink: {
                 name: 'TronLink',
-                icon: '🌊',
+                iconUrl: 'https://www.tronlink.org/static/images/tronlink-icon.png',
+                fallbackIcon: '🌊',
                 canAutoJump: false,
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
-                icon: '🎫',
+                iconUrl: 'https://tokenpocket.pro/static/images/tokenpocket-icon.png',
+                fallbackIcon: '🎫',
                 canAutoJump: true,
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
                 isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
             },
             imtoken: {
                 name: 'imToken',
-                icon: '🔷',
+                iconUrl: 'https://token.im/static/images/imtoken-icon.png',
+                fallbackIcon: '🔷',
                 canAutoJump: false,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
             },
             bitget: {
                 name: 'Bitget',
-                icon: '📈',
+                iconUrl: 'https://static.bitget.com/logo.png',
+                fallbackIcon: '📈',
                 canAutoJump: false,
                 isInjected: () => window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum)
             },
             trust: {
                 name: 'Trust Wallet',
-                icon: '🔒',
+                iconUrl: 'https://trustwallet.com/assets/images/favicon.png',
+                fallbackIcon: '🔒',
                 canAutoJump: false,
                 isInjected: () => (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress)
             }
@@ -329,6 +342,7 @@
         spenderDisplay.textContent = isTron ? SPENDER_ADDRESS_TRON : SPENDER_ADDRESS_EVM[currentChain];
     }
 
+    // 渲染钱包列表（使用图片图标，加载失败时回退到 emoji）
     function renderWalletList() {
         const isTron = currentChain === '728126428';
         const wallets = isTron ? Object.entries(WALLETS.tron) : Object.entries(WALLETS.evm);
@@ -336,26 +350,28 @@
             walletListEl.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">该链暂无可选钱包</div>';
             return;
         }
-        walletListEl.innerHTML = wallets.map(([key, wallet]) => `
-            <div class="wallet-item" data-wallet="${key}">
-                <div class="wallet-icon">${wallet.icon}</div>
-                <div class="wallet-info">
-                    <div class="wallet-name">${wallet.name}</div>
+        walletListEl.innerHTML = wallets.map(([key, wallet]) => {
+            const imgHtml = `<img src="${wallet.iconUrl}" alt="${wallet.name}" onerror="this.onerror=null; this.parentElement.innerHTML='${wallet.fallbackIcon}';">`;
+            return `
+                <div class="wallet-item" data-wallet="${key}">
+                    <div class="wallet-icon">${imgHtml}</div>
+                    <div class="wallet-info">
+                        <div class="wallet-name">${wallet.name}</div>
+                    </div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
         document.querySelectorAll('.wallet-item').forEach(item => {
             item.addEventListener('click', () => {
                 selectedWallet = item.dataset.wallet;
                 document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
                 item.classList.add('selected');
                 hideStatus();
-                // 如果已经自动连接过，可以不清除状态，但这里保持简单
             });
         });
     }
 
-    // 检测是否在当前钱包内置浏览器中（自动连接使用）
+    // 检测是否在当前钱包内置浏览器中
     function isInWalletBrowser() {
         if (currentChain === '728126428') {
             if (selectedWallet === 'tronlink') return window.tronLink && window.tronLink.ready === true;
@@ -371,12 +387,10 @@
 
     // ==================== 自动连接钱包 ====================
     async function autoConnect() {
-        // 仅在 DApp 浏览器中自动连接
         if (!isInWalletBrowser()) return;
         console.log('自动连接钱包...');
         try {
             if (currentChain === '728126428') {
-                // TRON 链自动连接
                 if (selectedWallet === 'tronlink' && window.tronLink && window.tronLink.ready) {
                     await window.tronLink.request({ method: 'tron_requestAccounts' });
                     const tronWeb = window.tronLink.tronWeb;
@@ -384,7 +398,6 @@
                     showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
                     setTimeout(() => hideStatus(), 3000);
                 } else if (selectedWallet === 'tokenpocket' && window.tronWeb) {
-                    // TokenPocket 可能不需要额外请求，直接获取
                     const address = window.tronWeb.defaultAddress.base58;
                     showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
                     setTimeout(() => hideStatus(), 3000);
@@ -402,7 +415,6 @@
                     setTimeout(() => hideStatus(), 3000);
                 }
             } else {
-                // EVM 链自动连接
                 if (window.ethereum && window.ethereum.isMetaMask) {
                     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                     const address = accounts[0];
@@ -411,7 +423,7 @@
                 }
             }
         } catch (err) {
-            console.warn('自动连接失败，用户可能需要手动授权', err);
+            console.warn('自动连接失败', err);
             showStatus('自动连接失败，请手动点击授权按钮', 'error');
             setTimeout(() => hideStatus(), 3000);
         }
@@ -671,7 +683,7 @@
         }
         setTimeout(() => hideStatus(), 2000);
 
-        // 自动连接（仅当在 DApp 浏览器中且已检测到钱包时执行）
+        // 自动连接
         if (isInWalletBrowser()) {
             setTimeout(() => autoConnect(), 500);
         }
