@@ -261,12 +261,12 @@
         }
     };
 
-    // 钱包配置（使用更可靠的图标 CDN，并保留 emoji 回退）
+    // 钱包配置 - 使用更可靠的图标 URL
     const WALLETS = {
         evm: {
             metamask: {
                 name: 'MetaMask',
-                iconUrl: 'https://cdn.jsdelivr.net/npm/@walletconnect/modal@2.6.0/dist/assets/metamask.svg',
+                iconUrl: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@master/128/color/metamask.png',
                 fallbackIcon: '🦊',
                 canAutoJump: true,
                 dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
@@ -276,14 +276,14 @@
         tron: {
             tronlink: {
                 name: 'TronLink',
-                iconUrl: 'https://cdn.jsdelivr.net/npm/@tronlink/icons/tronlink.svg',
+                iconUrl: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@master/128/color/tronlink.png',
                 fallbackIcon: '🌊',
                 canAutoJump: false,
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
-                iconUrl: 'https://cdn.jsdelivr.net/npm/@tp-wallet/icons/tp.svg',
+                iconUrl: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@master/128/color/tokenpocket.png',
                 fallbackIcon: '🎫',
                 canAutoJump: true,
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
@@ -291,7 +291,7 @@
             },
             imtoken: {
                 name: 'imToken',
-                iconUrl: 'https://cdn.jsdelivr.net/npm/@imtoken/icons/imtoken.svg',
+                iconUrl: 'https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@master/128/color/imtoken.png',
                 fallbackIcon: '🔷',
                 canAutoJump: false,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
